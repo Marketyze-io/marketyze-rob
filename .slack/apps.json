@@ -1,0 +1,12 @@
+{
+  "apps": {
+    "E06Q6B85HU2": {
+      "app_id": "A06QE6YCXFV",
+      "enterprise_id": "E06Q6B85HU2",
+      "IsDev": false,
+      "team_domain": "marketyze-sandbox",
+      "team_id": "E06Q6B85HU2"
+    }
+  },
+  "default": "marketyze-sandbox"
+}
