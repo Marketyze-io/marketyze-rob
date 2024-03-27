@@ -6,6 +6,12 @@
       "IsDev": false,
       "team_domain": "marketyze-sandbox",
       "team_id": "E06Q6B85HU2"
+    },
+    "T733XDU7Q": {
+      "app_id": "A06RJGE6YGK",
+      "IsDev": false,
+      "team_domain": "marketyze",
+      "team_id": "T733XDU7Q"
     }
   },
   "default": "marketyze-sandbox"
