@@ -1,7 +1,17 @@
 import { DefineFunction, Schema, SlackFunction } from "deno-slack-sdk/mod.ts";
 
+interface dropdownOption {
+  text: {
+    type: string;
+    text: string;
+    emoji: boolean;
+  };
+  value: string;
+}
+
 let fb_name = "";
-let _fb_id = "";
+let fb_id = "";
+let externalToken: string | undefined = "";
 
 export const FbManagerStartModalFunction = DefineFunction({
   callback_id: "fb-manager-start-modal",
@@ -35,7 +45,7 @@ export default SlackFunction(
     }
 
     // If the token was retrieved successfully, use it:
-    const externalToken = tokenResponse.external_token;
+    externalToken = tokenResponse.external_token;
     // Make external API call with externalToken
     const me_response = await fetch("https://graph.facebook.com/me", {
       headers: new Headers({
@@ -54,8 +64,9 @@ export default SlackFunction(
     const myApiResponse = await me_response.json();
     console.log("/me: ", myApiResponse);
     fb_name = myApiResponse.name;
-    _fb_id = myApiResponse.id;
+    fb_id = myApiResponse.id;
 
+    // Open a modal
     const response = await client.views.open({
       interactivity_pointer: inputs.interactivity.interactivity_pointer,
       view: {
@@ -63,7 +74,7 @@ export default SlackFunction(
         "callback_id": "fb-manager-menu",
         "title": {
           "type": "plain_text",
-          "text": "FB Marketing Bot",
+          "text": "FB Marketing",
         },
         "blocks": [
           {
@@ -175,6 +186,42 @@ export default SlackFunction(
 ).addBlockActionsHandler(
   "button-bulk-fb-campaigns",
   async ({ body, client }) => {
+    // Make external API call with externalToken
+    const me_response = await fetch(
+      `https://graph.facebook.com/v19.0/${fb_id}/adaccounts?fields=name`,
+      {
+        headers: new Headers({
+          "Authorization": `Bearer ${externalToken}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        }),
+      },
+    );
+    if (me_response.status != 200) {
+      const body = await me_response.text();
+      const error =
+        `Failed to call my endpoint! (status: ${me_response.status}, body: ${body})`;
+      return { error };
+    }
+
+    // Do something here
+    const myApiResponse = await me_response.json();
+    console.log("Ad Accounts: ", myApiResponse);
+    const adAccountData = myApiResponse.data;
+
+    // Create options for the static select
+    const options: dropdownOption[] = [];
+    adAccountData.forEach((adAccount: { name: string; id: string }) => {
+      const option = {
+        "text": {
+          "type": "plain_text",
+          "text": adAccount.name,
+          "emoji": true,
+        },
+        "value": adAccount.id,
+      };
+      options.push(option);
+    });
+    // Update the modal with a new view
     const response = await client.views.update({
       interactivity_pointer: body.interactivity.interactivity_pointer,
       view_id: body.view.id,
@@ -202,7 +249,7 @@ export default SlackFunction(
             "text": {
               "type": "plain_text",
               "text":
-                `:wave: Hey ${fb_name}\n\nHere's the info I need before I can create those campaigns for you.`,
+                `:wave: Hey ${fb_name}!\n\nHere's the info I need before I can create those campaigns for you.`,
               "emoji": true,
             },
           },
@@ -211,14 +258,19 @@ export default SlackFunction(
           },
           {
             "type": "input",
-            "block_id": "ad_acc_id_input",
             "element": {
-              "type": "plain_text_input",
-              "action_id": "ad_acc_id_input-action",
+              "type": "static_select",
+              "placeholder": {
+                "type": "plain_text",
+                "text": "Select an item",
+                "emoji": true,
+              },
+              "options": options,
+              "action_id": "static_select-action",
             },
             "label": {
               "type": "plain_text",
-              "text": "Ad Account ID",
+              "text": "Ad Account",
               "emoji": true,
             },
           },
