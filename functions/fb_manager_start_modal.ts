@@ -1,5 +1,8 @@
 import { DefineFunction, Schema, SlackFunction } from "deno-slack-sdk/mod.ts";
 
+let fb_name = "";
+let _fb_id = "";
+
 export const FbManagerStartModalFunction = DefineFunction({
   callback_id: "fb-manager-start-modal",
   title: "FB Manager Start Modal",
@@ -50,8 +53,8 @@ export default SlackFunction(
     // Do something here
     const myApiResponse = await me_response.json();
     console.log("/me: ", myApiResponse);
-    const fb_name = myApiResponse.name;
-    const _fb_id = myApiResponse.id;
+    fb_name = myApiResponse.name;
+    _fb_id = myApiResponse.id;
 
     const response = await client.views.open({
       interactivity_pointer: inputs.interactivity.interactivity_pointer,
@@ -199,25 +202,12 @@ export default SlackFunction(
             "text": {
               "type": "plain_text",
               "text":
-                ":wave: Hey David!\n\nHere's the info I need before I can create those campaigns for you.",
+                `:wave: Hey ${fb_name}\n\nHere's the info I need before I can create those campaigns for you.`,
               "emoji": true,
             },
           },
           {
             "type": "divider",
-          },
-          {
-            "type": "input",
-            "block_id": "spreadsheet_url_input",
-            "element": {
-              "type": "url_text_input",
-              "action_id": "spreadsheet_url_input-action",
-            },
-            "label": {
-              "type": "plain_text",
-              "text": "Spreadsheet URL",
-              "emoji": true,
-            },
           },
           {
             "type": "input",
@@ -234,14 +224,14 @@ export default SlackFunction(
           },
           {
             "type": "input",
-            "block_id": "token_input",
+            "block_id": "spreadsheet_url_input",
             "element": {
-              "type": "plain_text_input",
-              "action_id": "token_input-action",
+              "type": "url_text_input",
+              "action_id": "spreadsheet_url_input-action",
             },
             "label": {
               "type": "plain_text",
-              "text": "Access Token",
+              "text": "Spreadsheet URL",
               "emoji": true,
             },
           },
