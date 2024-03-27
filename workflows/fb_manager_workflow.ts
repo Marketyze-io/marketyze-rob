@@ -7,6 +7,12 @@ const fbManagerWorkflow = DefineWorkflow({
   description: "Open the main menu for FB Marketing Manager",
   input_parameters: {
     properties: {
+      user_id: {
+        type: Schema.slack.types.user_id,
+      },
+      channel_id: {
+        type: Schema.slack.types.channel_id,
+      },
       interactivity: {
         type: Schema.slack.types.interactivity,
       },
@@ -15,7 +21,7 @@ const fbManagerWorkflow = DefineWorkflow({
         oauth2_provider_key: "marketyze-login-fb",
       },
     },
-    required: ["interactivity"],
+    required: ["user_id", "channel_id", "interactivity"],
   },
 });
 
