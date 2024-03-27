@@ -10,6 +10,10 @@ const fbManagerWorkflow = DefineWorkflow({
       interactivity: {
         type: Schema.slack.types.interactivity,
       },
+      fbAccessTokenId: {
+        type: Schema.slack.types.oauth2,
+        oauth2_provider_key: "marketyze-login-fb",
+      },
     },
     required: ["interactivity"],
   },
@@ -17,6 +21,9 @@ const fbManagerWorkflow = DefineWorkflow({
 
 fbManagerWorkflow.addStep(FbManagerStartModalFunction, {
   interactivity: fbManagerWorkflow.inputs.interactivity,
+  fbAccessTokenId: {
+    credential_source: "END_USER",
+  },
 });
 
 export default fbManagerWorkflow;

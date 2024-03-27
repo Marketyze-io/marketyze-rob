@@ -5,7 +5,15 @@ export const FbManagerStartModalFunction = DefineFunction({
   title: "FB Manager Start Modal",
   source_file: "functions/fb_manager_start_modal.ts",
   input_parameters: {
-    properties: { interactivity: { type: Schema.slack.types.interactivity } },
+    properties: {
+      interactivity: {
+        type: Schema.slack.types.interactivity,
+      },
+      fbAccessTokenId: {
+        type: Schema.slack.types.oauth2,
+        oauth2_provider_key: "marketyze-login-fb",
+      },
+    },
     required: ["interactivity"],
   },
   output_parameters: { properties: {}, required: [] },
