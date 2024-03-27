@@ -8,6 +8,9 @@ interface dropdownOption {
   };
   value: string;
 }
+interface formErrors {
+  [key: string]: string;
+}
 
 let fb_name = "";
 let fb_id = "";
@@ -75,6 +78,47 @@ export default SlackFunction(
     // Open a modal
     const response = await client.views.open({
       interactivity_pointer: inputs.interactivity.interactivity_pointer,
+      // Partial modal for testing
+      view: {
+        "type": "modal",
+        "callback_id": "fb-manager-menu",
+        "title": {
+          "type": "plain_text",
+          "text": "FB Marketing",
+        },
+        "blocks": [
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": `Hi ${fb_name}, here's what I can help you with:`,
+            },
+          },
+          {
+            "type": "divider",
+          },
+          {
+            "type": "section",
+            "block_id": "section-bulk-campaigns",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*Bulk Import* Facebook Ad Campaigns",
+            },
+            "accessory": {
+              "type": "button",
+              "text": {
+                "type": "plain_text",
+                "text": "Get Started",
+              },
+              "action_id": "button-bulk-fb-campaigns",
+            },
+          },
+          {
+            "type": "divider",
+          },
+        ],
+      },
+      /* Full modal
       view: {
         "type": "modal",
         "callback_id": "fb-manager-menu",
@@ -178,6 +222,7 @@ export default SlackFunction(
           },
         ],
       },
+      */
     });
     if (response.error) {
       const error =
@@ -406,23 +451,49 @@ export default SlackFunction(
       .values["spreadsheet_url_input"]["spreadsheet_url_input-action"].value;
     console.log("Ad Account ID: ", ad_account_id);
     console.log("Spreadsheet URL: ", spreadsheet_url);
-    const ephemeralResponse = await client.chat.postEphemeral({
-      channel: inputs.channel_id,
-      user: inputs.user_id,
-      text:
-        `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
-        Here's what I received:\n 
-        - Ad Account: ${ad_account_name}\n 
-        - Ad Account ID: ${ad_account_id}\n 
-        - Spreadsheet URL: ${spreadsheet_url}`,
-    });
-    if (!ephemeralResponse.ok) {
-      console.log(
-        "Failed to send an ephemeral message",
-        ephemeralResponse.error,
-      );
+
+    // Form validation
+    const errors: formErrors = {};
+    if (!ad_account_id) {
+      errors["ad_account_id_dropdown"] = "Please select an ad account";
     }
-    return {};
+    const isValidUrl = new RegExp(
+      "^(https?://)?(www.)?(docs.google.com/spreadsheets/d/)([a-zA-Z0-9-_]+)",
+    );
+    if (!spreadsheet_url) {
+      errors["spreadsheet_url_input"] = "Please enter a spreadsheet URL";
+    } else if (!isValidUrl.test(spreadsheet_url)) {
+      errors["spreadsheet_url_input"] = "Please enter a valid spreadsheet URL";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      console.log({
+        response_action: "errors",
+        errors: errors,
+      });
+      return {
+        response_action: "errors",
+        errors: errors,
+      };
+    } else {
+      const ephemeralResponse = await client.chat.postEphemeral({
+        channel: inputs.channel_id,
+        user: inputs.user_id,
+        text:
+          `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
+          Here's what I received:\n 
+          - Ad Account: ${ad_account_name}\n 
+          - Ad Account ID: ${ad_account_id}\n 
+          - Spreadsheet URL: ${spreadsheet_url}`,
+      });
+      if (!ephemeralResponse.ok) {
+        console.log(
+          "Failed to send an ephemeral message",
+          ephemeralResponse.error,
+        );
+      }
+      return;
+    }
   },
 ).addViewClosedHandler( // Ad Campaigns Closed
   ["fbBulkCampaign-form", "fbBulkAdsets-form"],
