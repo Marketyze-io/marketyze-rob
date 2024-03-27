@@ -29,9 +29,9 @@ const FbOAuthProvider = DefineOAuth2Provider({
  * https://api.slack.com/automation/manifest
  */
 export default Manifest({
-  name: "test-app",
-  description: "A template for building Slack apps with Deno",
-  icon: "assets/default_new_app_icon.png",
+  name: "Marketyze Auth for Slack",
+  description: "A Slack App to help with authentication for external APIs",
+  icon: "assets/white_icon.png",
   functions: [
     FbManagerStartModalFunction,
     FbMeFunction,
