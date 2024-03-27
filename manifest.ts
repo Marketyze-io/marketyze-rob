@@ -3,8 +3,6 @@ import { FbManagerStartModalFunction } from "./functions/fb_manager_start_modal.
 import fbManagerWorkflow from "./workflows/fb_manager_workflow.ts";
 import fbMeWorkflow from "./workflows/fb_me_workflow.ts";
 import { FbMeFunction } from "./functions/fb_me.ts";
-import fbCampaignCreateSingleWorkflow from "./workflows/fb_campaign_create_single_workflow.ts";
-import { FbGetAdAccountsFunction } from "./functions/fb_get_ad_accounts.ts";
 
 const FbOAuthProvider = DefineOAuth2Provider({
   provider_key: "marketyze-login-fb",
@@ -37,9 +35,8 @@ export default Manifest({
   functions: [
     FbManagerStartModalFunction,
     FbMeFunction,
-    FbGetAdAccountsFunction,
   ],
-  workflows: [fbManagerWorkflow, fbMeWorkflow, fbCampaignCreateSingleWorkflow],
+  workflows: [fbManagerWorkflow, fbMeWorkflow],
   outgoingDomains: ["graph.facebook.com", "facebook.com"],
   datastores: [],
   botScopes: [
