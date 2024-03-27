@@ -19,6 +19,12 @@ export const FbManagerStartModalFunction = DefineFunction({
   source_file: "functions/fb_manager_start_modal.ts",
   input_parameters: {
     properties: {
+      user_id: {
+        type: Schema.slack.types.user_id,
+      },
+      channel_id: {
+        type: Schema.slack.types.channel_id,
+      },
       interactivity: {
         type: Schema.slack.types.interactivity,
       },
@@ -27,7 +33,7 @@ export const FbManagerStartModalFunction = DefineFunction({
         oauth2_provider_key: "marketyze-login-fb",
       },
     },
-    required: ["interactivity"],
+    required: ["user_id", "channel_id", "interactivity"],
   },
   output_parameters: { properties: {}, required: [] },
 });
@@ -183,10 +189,10 @@ export default SlackFunction(
       completed: false,
     };
   },
-).addBlockActionsHandler(
+).addBlockActionsHandler( // Ad Campaigns Handler
   "button-bulk-fb-campaigns",
   async ({ body, client }) => {
-    // Make external API call with externalToken
+    // Fetch ad accounts via API
     const me_response = await fetch(
       `https://graph.facebook.com/v19.0/${fb_id}/adaccounts?fields=name`,
       {
@@ -203,7 +209,7 @@ export default SlackFunction(
       return { error };
     }
 
-    // Do something here
+    // Format the response
     const myApiResponse = await me_response.json();
     console.log("Ad Accounts: ", myApiResponse);
     const adAccountData = myApiResponse.data;
@@ -221,6 +227,7 @@ export default SlackFunction(
       };
       options.push(option);
     });
+
     // Update the modal with a new view
     const response = await client.views.update({
       interactivity_pointer: body.interactivity.interactivity_pointer,
@@ -249,7 +256,7 @@ export default SlackFunction(
             "text": {
               "type": "plain_text",
               "text":
-                `:wave: Hey ${fb_name}!\n\nHere's the info I need before I can create those campaigns for you.`,
+                `Hi ${fb_name}! :wave:\n\nHere's the info I need before I can create those campaigns for you.`,
               "emoji": true,
             },
           },
@@ -258,6 +265,7 @@ export default SlackFunction(
           },
           {
             "type": "input",
+            "block_id": "ad_account_id_dropdown",
             "element": {
               "type": "static_select",
               "placeholder": {
@@ -266,7 +274,7 @@ export default SlackFunction(
                 "emoji": true,
               },
               "options": options,
-              "action_id": "static_select-action",
+              "action_id": "ad_account_id_dropdown-action",
             },
             "label": {
               "type": "plain_text",
@@ -298,7 +306,7 @@ export default SlackFunction(
       completed: false,
     };
   },
-).addBlockActionsHandler(
+).addBlockActionsHandler( // Adsets Handler
   "button-bulk-fb-adsets",
   async ({ body, client }) => {
     const response = await client.views.update({
@@ -384,5 +392,45 @@ export default SlackFunction(
     return {
       completed: true,
     };
+  },
+).addViewSubmissionHandler( // Ad Campaigns Submission
+  "fbBulkCampaign-form",
+  async ({ inputs, body, client }) => {
+    const ad_account_name = body.view.state
+      .values["ad_account_id_dropdown"]["ad_account_id_dropdown-action"]
+      .selected_option.text.text;
+    const ad_account_id = body.view.state
+      .values["ad_account_id_dropdown"]["ad_account_id_dropdown-action"]
+      .selected_option.value;
+    const spreadsheet_url = body.view.state
+      .values["spreadsheet_url_input"]["spreadsheet_url_input-action"].value;
+    console.log("Ad Account ID: ", ad_account_id);
+    console.log("Spreadsheet URL: ", spreadsheet_url);
+    const ephemeralResponse = await client.chat.postEphemeral({
+      channel: inputs.channel_id,
+      user: inputs.user_id,
+      text:
+        `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
+        Here's what I received:\n 
+        - Ad Account: ${ad_account_name}\n 
+        - Ad Account ID: ${ad_account_id}\n 
+        - Spreadsheet URL: ${spreadsheet_url}`,
+    });
+    if (!ephemeralResponse.ok) {
+      console.log(
+        "Failed to send an ephemeral message",
+        ephemeralResponse.error,
+      );
+    }
+    return {};
+  },
+).addViewClosedHandler( // Ad Campaigns Closed
+  ["fbBulkCampaign-form", "fbBulkAdsets-form"],
+  async ({ view, client, body }) => {
+    console.log("View was closed: ", view);
+    return await client.functions.completeSuccess({
+      function_execution_id: body.function_execution_id,
+      outputs: {},
+    });
   },
 );

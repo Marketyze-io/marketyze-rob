@@ -26,6 +26,8 @@ const fbManagerWorkflow = DefineWorkflow({
 });
 
 fbManagerWorkflow.addStep(FbManagerStartModalFunction, {
+  user_id: fbManagerWorkflow.inputs.user_id,
+  channel_id: fbManagerWorkflow.inputs.channel_id,
   interactivity: fbManagerWorkflow.inputs.interactivity,
   fbAccessTokenId: {
     credential_source: "END_USER",
