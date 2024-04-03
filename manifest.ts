@@ -14,7 +14,7 @@ const FbOAuthProvider = DefineOAuth2Provider({
     client_id: "264652917823131",
     scope: [],
     authorization_url_extras: {
-      config_id: "1436380706979744",
+      config_id: "1470990110485151",
     },
     identity_config: {
       url: "https://graph.facebook.com/me",
