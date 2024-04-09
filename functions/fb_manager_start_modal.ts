@@ -108,6 +108,22 @@ export default SlackFunction(
           },
           {
             "type": "section",
+            "block_id": "section-single-campaign",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*Create Single* Facebook Ad Campaign",
+            },
+            "accessory": {
+              "type": "button",
+              "text": {
+                "type": "plain_text",
+                "text": "Get Started",
+              },
+              "action_id": "button-single-fb-campaign",
+            },
+          },
+          {
+            "type": "section",
             "block_id": "section-bulk-campaigns",
             "text": {
               "type": "mrkdwn",
@@ -367,6 +383,347 @@ export default SlackFunction(
       };
     },
   )
+  // Single Ad Campaign Handler
+  .addBlockActionsHandler(
+    "button-single-fb-campaign",
+    async ({ body, client }) => {
+      // Fetch ad accounts via API
+      const me_response = await fetch(
+        `https://graph.facebook.com/v19.0/${fb_id}/adaccounts?fields=name`,
+        {
+          headers: new Headers({
+            "Authorization": `Bearer ${externalToken}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          }),
+        },
+      );
+
+      // Handle the error if the /me endpoint was not called successfully
+      if (me_response.status != 200) {
+        const body = await me_response.text();
+        const error =
+          `Failed to call my endpoint! (status: ${me_response.status}, body: ${body})`;
+        return { error };
+      }
+
+      // Format the response
+      const myApiResponse = await me_response.json();
+      console.log("Ad Accounts: ", myApiResponse);
+      const adAccountData = myApiResponse.data;
+
+      // Create options for the static select
+      const options: dropdownOption[] = [];
+      adAccountData.forEach((adAccount: { name: string; id: string }) => {
+        const option = {
+          "text": {
+            "type": "plain_text",
+            "text": adAccount.name,
+            "emoji": true,
+          },
+          "value": adAccount.id,
+        };
+        options.push(option);
+      });
+
+      // Update the modal with a new view
+      const response = await client.views.update({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: {
+          "type": "modal",
+          "callback_id": "fbSingleCampaign-form",
+          "submit": {
+            "type": "plain_text",
+            "text": "Submit",
+            "emoji": true,
+          },
+          "close": {
+            "type": "plain_text",
+            "text": "Cancel",
+            "emoji": true,
+          },
+          "title": {
+            "type": "plain_text",
+            "text": "Facebook Campaigns",
+            "emoji": true,
+          },
+          "blocks": [
+            {
+              "type": "section",
+              "text": {
+                "type": "plain_text",
+                "text":
+                  `Hi ${fb_name}! :wave:\n\nHere's the info I need before I can create that campaign for you.`,
+                "emoji": true,
+              },
+            },
+            {
+              "type": "divider",
+            },
+            {
+              "type": "input",
+              "block_id": "ad_account_id_dropdown",
+              "element": {
+                "type": "static_select",
+                "placeholder": {
+                  "type": "plain_text",
+                  "text": "Select an item",
+                  "emoji": true,
+                },
+                "options": options,
+                "action_id": "ad_account_id_dropdown-action",
+              },
+              "label": {
+                "type": "plain_text",
+                "text": "Ad Account",
+                "emoji": true,
+              },
+            },
+            {
+              "type": "input",
+              "block_id": "campaign_name_input",
+              "element": {
+                "type": "plain_text_input",
+                "action_id": "campaign_name_input-action",
+              },
+              "label": {
+                "type": "plain_text",
+                "text": "Campaign Name",
+                "emoji": true,
+              },
+            },
+            {
+              "type": "input",
+              "block_id": "objective_dropdown",
+              "element": {
+                "type": "static_select",
+                "placeholder": {
+                  "type": "plain_text",
+                  "text": "Select an item",
+                  "emoji": true,
+                },
+                "options": [
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Awareness",
+                      "emoji": true,
+                    },
+                    "value": "OUTCOME_AWARENESS",
+                  },
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Traffic",
+                      "emoji": true,
+                    },
+                    "value": "OUTCOME_TRAFFIC",
+                  },
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Engagement",
+                      "emoji": true,
+                    },
+                    "value": "OUTCOME_ENGAGEMENT",
+                  },
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Leads",
+                      "emoji": true,
+                    },
+                    "value": "OUTCOME_LEADS",
+                  },
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "App Promotion",
+                      "emoji": true,
+                    },
+                    "value": "OUTCOME_APP_PROMOTION",
+                  },
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Sales",
+                      "emoji": true,
+                    },
+                    "value": "OUTCOME_SALES",
+                  },
+                ],
+                "action_id": "objective_dropdown-select-action",
+              },
+              "label": {
+                "type": "plain_text",
+                "text": "Campaign Objective",
+                "emoji": true,
+              },
+            },
+            {
+              "type": "input",
+              "block_id": "status_dropdown",
+              "element": {
+                "type": "static_select",
+                "placeholder": {
+                  "type": "plain_text",
+                  "text": "Select an item",
+                  "emoji": true,
+                },
+                "options": [
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Paused",
+                      "emoji": true,
+                    },
+                    "value": "PAUSED",
+                  },
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Running",
+                      "emoji": true,
+                    },
+                    "value": "RUNNING",
+                  },
+                ],
+                "action_id": "status_dropdown-select-action",
+              },
+              "label": {
+                "type": "plain_text",
+                "text": "Campaign Status",
+                "emoji": true,
+              },
+            },
+            {
+              "type": "input",
+              "block_id": "buying_type_dropdown",
+              "element": {
+                "type": "static_select",
+                "placeholder": {
+                  "type": "plain_text",
+                  "text": "Select an item",
+                  "emoji": true,
+                },
+                "options": [
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Auction",
+                      "emoji": true,
+                    },
+                    "value": "AUCTION",
+                  },
+                ],
+                "action_id": "buying_dropdown-select-action",
+              },
+              "label": {
+                "type": "plain_text",
+                "text": "Buying Type",
+                "emoji": true,
+              },
+            },
+            {
+              "type": "input",
+              "block_id": "buying_type_dropdown",
+              "element": {
+                "type": "static_select",
+                "placeholder": {
+                  "type": "plain_text",
+                  "text": "Select an item",
+                  "emoji": true,
+                },
+                "options": [
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Auction",
+                      "emoji": true,
+                    },
+                    "value": "AUCTION",
+                  },
+                ],
+                "action_id": "buying_dropdown-select-action",
+              },
+              "label": {
+                "type": "plain_text",
+                "text": "Buying Type",
+                "emoji": true,
+              },
+            },
+            {
+              "type": "input",
+              "block_id": "special_ad_categories_input",
+              "element": {
+                "type": "multi_static_select",
+                "placeholder": {
+                  "type": "plain_text",
+                  "text": "Select options",
+                  "emoji": true,
+                },
+                "options": [
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Credit",
+                      "emoji": true,
+                    },
+                    "value": "CREDIT",
+                  },
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Employment",
+                      "emoji": true,
+                    },
+                    "value": "EMPLOYMENT",
+                  },
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Housing",
+                      "emoji": true,
+                    },
+                    "value": "HOUSING",
+                  },
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Politics",
+                      "emoji": true,
+                    },
+                    "value": "ISSUES_ELECTIONS_POLITICS",
+                  },
+                  {
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Online Gambling",
+                      "emoji": true,
+                    },
+                    "value": "ONLINE_GAMBLING_AND_GAMING",
+                  },
+                ],
+                "action_id": "multi_static_select-action",
+              },
+              "label": {
+                "type": "plain_text",
+                "text": "Special Ad Categories",
+                "emoji": true,
+              },
+            },
+          ],
+        },
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
+      };
+    },
+  )
   // Adsets Handler
   .addBlockActionsHandler(
     "button-bulk-fb-adsets",
@@ -505,6 +862,88 @@ export default SlackFunction(
           - Ad Account: ${ad_account_name}\n 
           - Ad Account ID: ${ad_account_id}\n 
           - Spreadsheet URL: ${spreadsheet_url}`,
+        });
+        if (!ephemeralResponse.ok) {
+          console.log(
+            "Failed to send an ephemeral message",
+            ephemeralResponse.error,
+          );
+        }
+        return;
+      }
+    },
+  )
+  // Single Ad Campaign Submission Handler
+  .addViewSubmissionHandler(
+    "fbSingleCampaign-form",
+    async ({ inputs, body, client }) => {
+      const ad_account_name = body.view.state
+        .values["ad_account_id_dropdown"]["ad_account_id_dropdown-action"]
+        .selected_option.text.text;
+      const ad_account_id = body.view.state
+        .values["ad_account_id_dropdown"]["ad_account_id_dropdown-action"]
+        .selected_option.value;
+      const campaign_name = body.view.state
+        .values["campaign_name_input"]["campaign_name_input-action"].value;
+      const campaign_objective = body.view.state
+        .values["objective_dropdown"]["objective_dropdown-select-action"]
+        .selected_option.text.text;
+      const campaign_status = body.view.state
+        .values["status_dropdown"]["status_dropdown-select-action"]
+        .selected_option.text.text;
+      const buying_type = body.view.state
+        .values["buying_type_dropdown"]["buying_dropdown-select-action"]
+        .selected_option.text.text;
+      const special_ad_categories = body.view.state
+        .values["special_ad_categories_input"]["multi_static_select-action"]
+        .selected_options.map((option: { text: { text: string } }) =>
+          option.text.text
+        );
+      console.log("Ad Account Name: ", ad_account_name);
+      console.log("Ad Account ID: ", ad_account_id);
+      console.log("Campaign Name: ", campaign_name);
+      console.log("Campaign Objective: ", campaign_objective);
+      console.log("Campaign Status: ", campaign_status);
+      console.log("Buying Type: ", buying_type);
+      console.log("Special Ad Categories: ", special_ad_categories);
+
+      // Form validation
+      const errors: formErrors = {};
+      if (!ad_account_id) {
+        errors["ad_account_id_dropdown"] = "Please select an ad account";
+      }
+      /*
+      if (!spreadsheet_url) {
+        errors["spreadsheet_url_input"] = "Please enter a spreadsheet URL";
+      } else if (!isValidUrl.test(spreadsheet_url)) {
+        errors["spreadsheet_url_input"] =
+          "Please enter a valid spreadsheet URL";
+      }
+      */
+
+      if (Object.keys(errors).length > 0) {
+        console.log({
+          response_action: "errors",
+          errors: errors,
+        });
+        return {
+          response_action: "errors",
+          errors: errors,
+        };
+      } else {
+        const ephemeralResponse = await client.chat.postEphemeral({
+          channel: inputs.channel_id,
+          user: inputs.user_id,
+          text:
+            `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
+          Here's what I received:\n 
+          - Ad Account: ${ad_account_name}\n 
+          - Ad Account ID: ${ad_account_id}\n 
+          - Campaign Name: ${campaign_name}\n
+          - Campaign Objective: ${campaign_objective}\n
+          - Campaign Status: ${campaign_status}\n
+          - Buying Type: ${buying_type}\n
+          - Special Ad Categories: ${special_ad_categories.join(", ")}`,
         });
         if (!ephemeralResponse.ok) {
           console.log(
