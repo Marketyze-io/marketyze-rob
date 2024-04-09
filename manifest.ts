@@ -37,7 +37,11 @@ export default Manifest({
     FbMeFunction,
   ],
   workflows: [fbManagerWorkflow, fbMeWorkflow],
-  outgoingDomains: ["graph.facebook.com", "facebook.com"],
+  outgoingDomains: [
+    "graph.facebook.com",
+    "facebook.com",
+    "ap-southeast-1.amazonaws.com",
+  ],
   datastores: [],
   botScopes: [
     "commands",
