@@ -18,6 +18,7 @@ interface formErrors {
 let fb_name = "";
 let fb_id = "";
 let externalTokenFb: string | undefined = "";
+let externalTokenGs: string | undefined = "";
 
 // Function Definition
 export const FbManagerStartModalFunction = DefineFunction({
@@ -53,7 +54,7 @@ export const FbManagerStartModalFunction = DefineFunction({
 export default SlackFunction(
   FbManagerStartModalFunction,
   async ({ inputs, client }) => {
-    // Retrieve the external token
+    // Retrieve the Facebook external token
     const tokenResponse = await client.apps.auth.external.get({
       external_token_id: inputs.fbAccessTokenId,
     });
@@ -64,9 +65,25 @@ export default SlackFunction(
         `Failed to retrieve the external auth token due to ${tokenResponse.error}`;
       return { error };
     }
+    externalTokenFb = tokenResponse.external_token;
+
+    // Retrieve the Google Sheets external token
+    const gsTokenResponse = await client.apps.auth.external.get({
+      external_token_id: inputs.googleSheetsAccessTokenId,
+    });
+
+    // Handle the error if the token was not retrieved successfully
+    if (gsTokenResponse.error) {
+      const error =
+        `Failed to retrieve the external auth token due to ${gsTokenResponse.error}`;
+      return { error };
+    }
+    externalTokenGs = gsTokenResponse.external_token;
+
+    console.log("External Token FB: ", externalTokenFb);
+    console.log("External Token GS: ", externalTokenGs);
 
     // Call the /me endpoint to retrieve the user's name
-    externalTokenFb = tokenResponse.external_token;
     const me_response = await fetch("https://graph.facebook.com/me", {
       headers: new Headers({
         "Authorization": `Bearer ${externalTokenFb}`,
