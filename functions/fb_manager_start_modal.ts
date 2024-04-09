@@ -710,8 +710,6 @@ export default SlackFunction(
         .selected_option.value;
       const spreadsheet_url = body.view.state
         .values["spreadsheet_url_input"]["spreadsheet_url_input-action"].value;
-      console.log("Ad Account ID: ", ad_account_id);
-      console.log("Spreadsheet URL: ", spreadsheet_url);
 
       // Form validation
       const errors: formErrors = {};
@@ -737,25 +735,28 @@ export default SlackFunction(
           response_action: "errors",
           errors: errors,
         };
-      } else {
-        const ephemeralResponse = await client.chat.postEphemeral({
-          channel: inputs.channel_id,
-          user: inputs.user_id,
-          text:
-            `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
-          Here's what I received:\n 
-          - Ad Account: ${ad_account_name}\n 
-          - Ad Account ID: ${ad_account_id}\n 
-          - Spreadsheet URL: ${spreadsheet_url}`,
-        });
-        if (!ephemeralResponse.ok) {
-          console.log(
-            "Failed to send an ephemeral message",
-            ephemeralResponse.error,
-          );
-        }
-        return;
       }
+
+      const spreadsheet_id = spreadsheet_url.split("/")[5];
+      console.log("Spreadsheet ID: ", spreadsheet_id);
+
+      const ephemeralResponse = await client.chat.postEphemeral({
+        channel: inputs.channel_id,
+        user: inputs.user_id,
+        text:
+          `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
+        Here's what I received:\n 
+        - Ad Account: ${ad_account_name}\n 
+        - Ad Account ID: ${ad_account_id}\n 
+        - Spreadsheet URL: ${spreadsheet_url}`,
+      });
+      if (!ephemeralResponse.ok) {
+        console.log(
+          "Failed to send an ephemeral message",
+          ephemeralResponse.error,
+        );
+      }
+      return;
     },
   )
   // Single Ad Campaign Submission Handler
