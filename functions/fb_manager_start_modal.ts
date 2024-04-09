@@ -80,9 +80,6 @@ export default SlackFunction(
     }
     externalTokenGs = gsTokenResponse.external_token;
 
-    console.log("External Token FB: ", externalTokenFb);
-    console.log("External Token GS: ", externalTokenGs);
-
     // Call the /me endpoint to retrieve the user's name
     const me_response = await fetch("https://graph.facebook.com/me", {
       headers: new Headers({
