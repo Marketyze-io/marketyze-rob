@@ -39,6 +39,10 @@ export const FbManagerStartModalFunction = DefineFunction({
         type: Schema.slack.types.oauth2,
         oauth2_provider_key: "marketyze-login-fb",
       },
+      googleSheetsAccessTokenId: {
+        type: Schema.slack.types.oauth2,
+        oauth2_provider_key: "marketyze-login-google-sheets",
+      },
     },
     required: ["user_id", "channel_id", "interactivity"],
   },
