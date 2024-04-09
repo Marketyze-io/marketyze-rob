@@ -91,7 +91,6 @@ export default SlackFunction(
     // Open the main menu
     const response = await client.views.open({
       interactivity_pointer: inputs.interactivity.interactivity_pointer,
-      // Partial modal for testing
       view: {
         "type": "modal",
         "callback_id": "fb-manager-menu",
@@ -147,111 +146,6 @@ export default SlackFunction(
           },
         ],
       },
-      /* Full modal
-      view: {
-        "type": "modal",
-        "callback_id": "fb-manager-menu",
-        "title": {
-          "type": "plain_text",
-          "text": "FB Marketing",
-        },
-        "blocks": [
-          {
-            "type": "section",
-            "text": {
-              "type": "mrkdwn",
-              "text": `Hi ${fb_name}, here's what I can help you with:`,
-            },
-          },
-          {
-            "type": "divider",
-          },
-          {
-            "type": "section",
-            "block_id": "section-bulk-campaigns",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Bulk Import* Facebook Ad Campaigns",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-bulk-fb-campaigns",
-            },
-          },
-          {
-            "type": "section",
-            "block_id": "section-bulk-adsets",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Bulk Import* Facebook Adsets",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-bulk-fb-adsets",
-            },
-          },
-          {
-            "type": "section",
-            "block_id": "section-bulk-ads",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Bulk Import* Facebook Ads",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-bulk-fb-ads",
-            },
-          },
-          {
-            "type": "divider",
-          },
-          {
-            "type": "section",
-            "block_id": "section-manage-targeting",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Manage* Facebook Audiences/Targeting",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-bulk-fb-ads",
-            },
-          },
-          {
-            "type": "section",
-            "block_id": "section-upload-adcreatives",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Upload* Facebook Ad Creatives",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-upload-fb-ad-creatives",
-            },
-          },
-        ],
-      },
-       */
     });
 
     // Handle the error if the modal was not opened successfully
