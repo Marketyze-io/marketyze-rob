@@ -17,7 +17,7 @@ interface formErrors {
 
 let fb_name = "";
 let fb_id = "";
-let externalToken: string | undefined = "";
+let externalTokenFb: string | undefined = "";
 
 // Function Definition
 export const FbManagerStartModalFunction = DefineFunction({
@@ -66,10 +66,10 @@ export default SlackFunction(
     }
 
     // Call the /me endpoint to retrieve the user's name
-    externalToken = tokenResponse.external_token;
+    externalTokenFb = tokenResponse.external_token;
     const me_response = await fetch("https://graph.facebook.com/me", {
       headers: new Headers({
-        "Authorization": `Bearer ${externalToken}`,
+        "Authorization": `Bearer ${externalTokenFb}`,
         "Content-Type": "application/x-www-form-urlencoded",
       }),
     });
@@ -169,7 +169,7 @@ export default SlackFunction(
         `https://graph.facebook.com/v19.0/${fb_id}/adaccounts?fields=name`,
         {
           headers: new Headers({
-            "Authorization": `Bearer ${externalToken}`,
+            "Authorization": `Bearer ${externalTokenFb}`,
             "Content-Type": "application/x-www-form-urlencoded",
           }),
         },
@@ -290,7 +290,7 @@ export default SlackFunction(
         `https://graph.facebook.com/v19.0/${fb_id}/adaccounts?fields=name`,
         {
           headers: new Headers({
-            "Authorization": `Bearer ${externalToken}`,
+            "Authorization": `Bearer ${externalTokenFb}`,
             "Content-Type": "application/x-www-form-urlencoded",
           }),
         },
@@ -821,7 +821,7 @@ export default SlackFunction(
           "campaign_buying_type": buying_type,
           "special_ad_categories": special_ad_categories,
           "ad_account_id": ad_account_id,
-          "access_token": externalToken,
+          "access_token": externalTokenFb,
         };
         const response = await fetch(
           "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/single",
