@@ -860,13 +860,13 @@ export default SlackFunction(
         .values["campaign_name_input"]["campaign_name_input-action"].value;
       const campaign_objective = body.view.state
         .values["objective_dropdown"]["objective_dropdown-select-action"]
-        .selected_option.text.text;
+        .selected_option.value;
       const campaign_status = body.view.state
         .values["status_dropdown"]["status_dropdown-select-action"]
-        .selected_option.text.text;
+        .selected_option.value;
       const buying_type = body.view.state
         .values["buying_type_dropdown"]["buying_dropdown-select-action"]
-        .selected_option.text.text;
+        .selected_option.value;
       const special_ad_categories = body.view.state
         .values["special_ad_categories_input"]["multi_static_select-action"]
         .selected_options.map((option: { text: { text: string } }) =>
@@ -885,14 +885,6 @@ export default SlackFunction(
       if (!ad_account_id) {
         errors["ad_account_id_dropdown"] = "Please select an ad account";
       }
-      /*
-      if (!spreadsheet_url) {
-        errors["spreadsheet_url_input"] = "Please enter a spreadsheet URL";
-      } else if (!isValidUrl.test(spreadsheet_url)) {
-        errors["spreadsheet_url_input"] =
-          "Please enter a valid spreadsheet URL";
-      }
-      */
 
       if (Object.keys(errors).length > 0) {
         console.log({
@@ -947,6 +939,7 @@ export default SlackFunction(
           const error =
             `Failed to call the API endpoint! (status: ${response.status})`;
           console.log(error);
+          console.log(response);
           return { error };
         }
         return;
