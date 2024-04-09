@@ -626,35 +626,8 @@ export default SlackFunction(
             },
             {
               "type": "input",
-              "block_id": "buying_type_dropdown",
-              "element": {
-                "type": "static_select",
-                "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select an item",
-                  "emoji": true,
-                },
-                "options": [
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Auction",
-                      "emoji": true,
-                    },
-                    "value": "AUCTION",
-                  },
-                ],
-                "action_id": "buying_dropdown-select-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Buying Type",
-                "emoji": true,
-              },
-            },
-            {
-              "type": "input",
               "block_id": "special_ad_categories_input",
+              "optional": true,
               "element": {
                 "type": "multi_static_select",
                 "placeholder": {
