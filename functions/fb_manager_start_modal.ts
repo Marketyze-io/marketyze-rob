@@ -924,6 +924,31 @@ export default SlackFunction(
             ephemeralResponse.error,
           );
         }
+        const payload = {
+          "campaign_name": campaign_name,
+          "campaign_objective": campaign_objective,
+          "campaign_status": campaign_status,
+          "campaign_buying_type": buying_type,
+          "campaign_special_ad_categories": special_ad_categories,
+          "ad_account_id": ad_account_id,
+          "access_token": externalToken,
+        };
+        const response = await fetch(
+          "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/single",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          },
+        );
+        if (response.status != 200) {
+          const error =
+            `Failed to call the API endpoint! (status: ${response.status})`;
+          return { error };
+        }
+        console.log("API Response: ", response);
         return;
       }
     },
