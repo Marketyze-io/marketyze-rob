@@ -40,7 +40,7 @@ export default Manifest({
   outgoingDomains: [
     "graph.facebook.com",
     "facebook.com",
-    "ap-southeast-1.amazonaws.com",
+    "srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com",
   ],
   datastores: [],
   botScopes: [
