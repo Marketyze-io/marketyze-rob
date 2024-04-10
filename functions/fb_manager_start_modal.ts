@@ -17,7 +17,8 @@ interface formErrors {
 
 let fb_name = "";
 let fb_id = "";
-let externalToken: string | undefined = "";
+let externalTokenFb: string | undefined = "";
+let externalTokenGs: string | undefined = "";
 
 // Function Definition
 export const FbManagerStartModalFunction = DefineFunction({
@@ -39,6 +40,10 @@ export const FbManagerStartModalFunction = DefineFunction({
         type: Schema.slack.types.oauth2,
         oauth2_provider_key: "marketyze-login-fb",
       },
+      googleSheetsAccessTokenId: {
+        type: Schema.slack.types.oauth2,
+        oauth2_provider_key: "marketyze-login-google-sheets",
+      },
     },
     required: ["user_id", "channel_id", "interactivity"],
   },
@@ -49,7 +54,7 @@ export const FbManagerStartModalFunction = DefineFunction({
 export default SlackFunction(
   FbManagerStartModalFunction,
   async ({ inputs, client }) => {
-    // Retrieve the external token
+    // Retrieve the Facebook external token
     const tokenResponse = await client.apps.auth.external.get({
       external_token_id: inputs.fbAccessTokenId,
     });
@@ -60,12 +65,25 @@ export default SlackFunction(
         `Failed to retrieve the external auth token due to ${tokenResponse.error}`;
       return { error };
     }
+    externalTokenFb = tokenResponse.external_token;
+
+    // Retrieve the Google Sheets external token
+    const gsTokenResponse = await client.apps.auth.external.get({
+      external_token_id: inputs.googleSheetsAccessTokenId,
+    });
+
+    // Handle the error if the token was not retrieved successfully
+    if (gsTokenResponse.error) {
+      const error =
+        `Failed to retrieve the external auth token due to ${gsTokenResponse.error}`;
+      return { error };
+    }
+    externalTokenGs = gsTokenResponse.external_token;
 
     // Call the /me endpoint to retrieve the user's name
-    externalToken = tokenResponse.external_token;
     const me_response = await fetch("https://graph.facebook.com/me", {
       headers: new Headers({
-        "Authorization": `Bearer ${externalToken}`,
+        "Authorization": `Bearer ${externalTokenFb}`,
         "Content-Type": "application/x-www-form-urlencoded",
       }),
     });
@@ -87,7 +105,6 @@ export default SlackFunction(
     // Open the main menu
     const response = await client.views.open({
       interactivity_pointer: inputs.interactivity.interactivity_pointer,
-      // Partial modal for testing
       view: {
         "type": "modal",
         "callback_id": "fb-manager-menu",
@@ -143,111 +160,6 @@ export default SlackFunction(
           },
         ],
       },
-      /* Full modal
-      view: {
-        "type": "modal",
-        "callback_id": "fb-manager-menu",
-        "title": {
-          "type": "plain_text",
-          "text": "FB Marketing",
-        },
-        "blocks": [
-          {
-            "type": "section",
-            "text": {
-              "type": "mrkdwn",
-              "text": `Hi ${fb_name}, here's what I can help you with:`,
-            },
-          },
-          {
-            "type": "divider",
-          },
-          {
-            "type": "section",
-            "block_id": "section-bulk-campaigns",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Bulk Import* Facebook Ad Campaigns",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-bulk-fb-campaigns",
-            },
-          },
-          {
-            "type": "section",
-            "block_id": "section-bulk-adsets",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Bulk Import* Facebook Adsets",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-bulk-fb-adsets",
-            },
-          },
-          {
-            "type": "section",
-            "block_id": "section-bulk-ads",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Bulk Import* Facebook Ads",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-bulk-fb-ads",
-            },
-          },
-          {
-            "type": "divider",
-          },
-          {
-            "type": "section",
-            "block_id": "section-manage-targeting",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Manage* Facebook Audiences/Targeting",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-bulk-fb-ads",
-            },
-          },
-          {
-            "type": "section",
-            "block_id": "section-upload-adcreatives",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Upload* Facebook Ad Creatives",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-upload-fb-ad-creatives",
-            },
-          },
-        ],
-      },
-       */
     });
 
     // Handle the error if the modal was not opened successfully
@@ -271,7 +183,7 @@ export default SlackFunction(
         `https://graph.facebook.com/v19.0/${fb_id}/adaccounts?fields=name`,
         {
           headers: new Headers({
-            "Authorization": `Bearer ${externalToken}`,
+            "Authorization": `Bearer ${externalTokenFb}`,
             "Content-Type": "application/x-www-form-urlencoded",
           }),
         },
@@ -392,7 +304,7 @@ export default SlackFunction(
         `https://graph.facebook.com/v19.0/${fb_id}/adaccounts?fields=name`,
         {
           headers: new Headers({
-            "Authorization": `Bearer ${externalToken}`,
+            "Authorization": `Bearer ${externalTokenFb}`,
             "Content-Type": "application/x-www-form-urlencoded",
           }),
         },
@@ -798,8 +710,6 @@ export default SlackFunction(
         .selected_option.value;
       const spreadsheet_url = body.view.state
         .values["spreadsheet_url_input"]["spreadsheet_url_input-action"].value;
-      console.log("Ad Account ID: ", ad_account_id);
-      console.log("Spreadsheet URL: ", spreadsheet_url);
 
       // Form validation
       const errors: formErrors = {};
@@ -825,25 +735,55 @@ export default SlackFunction(
           response_action: "errors",
           errors: errors,
         };
-      } else {
-        const ephemeralResponse = await client.chat.postEphemeral({
-          channel: inputs.channel_id,
-          user: inputs.user_id,
-          text:
-            `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
-          Here's what I received:\n 
-          - Ad Account: ${ad_account_name}\n 
-          - Ad Account ID: ${ad_account_id}\n 
-          - Spreadsheet URL: ${spreadsheet_url}`,
-        });
-        if (!ephemeralResponse.ok) {
-          console.log(
-            "Failed to send an ephemeral message",
-            ephemeralResponse.error,
-          );
-        }
-        return;
       }
+
+      const spreadsheet_id = spreadsheet_url.split("/")[5];
+      console.log("Spreadsheet ID: ", spreadsheet_id);
+
+      const ephemeralResponse = await client.chat.postEphemeral({
+        channel: inputs.channel_id,
+        user: inputs.user_id,
+        text:
+          `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
+        Here's what I received:\n 
+        - Ad Account: ${ad_account_name}\n 
+        - Ad Account ID: ${ad_account_id}\n 
+        - Spreadsheet URL: ${spreadsheet_url}`,
+      });
+      if (!ephemeralResponse.ok) {
+        console.log(
+          "Failed to send an ephemeral message",
+          ephemeralResponse.error,
+        );
+      }
+
+      const payload = {
+        "channel_id": inputs.channel_id,
+        "ad_account_id": ad_account_id,
+        "spreadsheet_id": spreadsheet_id,
+        "fb_access_token": externalTokenFb,
+        "gs_access_token": externalTokenGs,
+      };
+
+      const response = await fetch(
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/bulk",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${response.status})`;
+        console.log(error);
+        console.log(response);
+        return { error };
+      }
+
+      return;
     },
   )
   // Single Ad Campaign Submission Handler
@@ -923,7 +863,7 @@ export default SlackFunction(
           "campaign_buying_type": buying_type,
           "special_ad_categories": special_ad_categories,
           "ad_account_id": ad_account_id,
-          "access_token": externalToken,
+          "access_token": externalTokenFb,
         };
         const response = await fetch(
           "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/single",

@@ -20,6 +20,10 @@ const fbManagerWorkflow = DefineWorkflow({
         type: Schema.slack.types.oauth2,
         oauth2_provider_key: "marketyze-login-fb",
       },
+      googleSheetsAccessTokenId: {
+        type: Schema.slack.types.oauth2,
+        oauth2_provider_key: "marketyze-login-google-sheets",
+      },
     },
     required: ["user_id", "channel_id", "interactivity"],
   },
@@ -30,6 +34,9 @@ fbManagerWorkflow.addStep(FbManagerStartModalFunction, {
   channel_id: fbManagerWorkflow.inputs.channel_id,
   interactivity: fbManagerWorkflow.inputs.interactivity,
   fbAccessTokenId: {
+    credential_source: "END_USER",
+  },
+  googleSheetsAccessTokenId: {
     credential_source: "END_USER",
   },
 });

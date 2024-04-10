@@ -23,6 +23,28 @@ const FbOAuthProvider = DefineOAuth2Provider({
   },
 });
 
+const GoogleSheetsOAuthProvider = DefineOAuth2Provider({
+  provider_key: "marketyze-login-google-sheets",
+  provider_type: Schema.providers.oauth2.CUSTOM,
+  options: {
+    provider_name: "Google Sheets",
+    authorization_url: "https://accounts.google.com/o/oauth2/auth",
+    token_url: "https://oauth2.googleapis.com/token",
+    client_id:
+      "434069935105-us197bf22st63df5l70pn09mikg3e0k0.apps.googleusercontent.com",
+    scope: [
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/drive",
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile",
+    ],
+    identity_config: {
+      url: "https://www.googleapis.com/oauth2/v1/userinfo",
+      account_identifier: "$.email",
+    },
+  },
+});
+
 /**
  * The app manifest contains the app's configuration. This
  * file defines attributes like app name and description.
@@ -41,6 +63,9 @@ export default Manifest({
     "graph.facebook.com",
     "facebook.com",
     "srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com",
+    "sheets.googleapis.com",
+    "www.googleapis.com",
+    "accounts.google.com",
   ],
   datastores: [],
   botScopes: [
@@ -51,5 +76,5 @@ export default Manifest({
     "datastore:write",
     "triggers:write",
   ],
-  externalAuthProviders: [FbOAuthProvider],
+  externalAuthProviders: [FbOAuthProvider, GoogleSheetsOAuthProvider],
 });
