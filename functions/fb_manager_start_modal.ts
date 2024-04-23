@@ -140,22 +140,6 @@ export default SlackFunction(
             },
           },
           {
-            "type": "section",
-            "block_id": "section-update-purge",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Update* Ad Campaign data (force update)",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-update-purge-fb-campaign",
-            },
-          },
-          {
             "type": "divider",
           },
           {
