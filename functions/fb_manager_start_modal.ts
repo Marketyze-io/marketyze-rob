@@ -177,6 +177,38 @@ export default SlackFunction(
           {
             "type": "divider",
           },
+          {
+            "type": "section",
+            "block_id": "section-single-adsets",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*Create Single* Facebook Adset",
+            },
+            "accessory": {
+              "type": "button",
+              "text": {
+                "type": "plain_text",
+                "text": "Get Started",
+              },
+              "action_id": "button-single-fb-adsets",
+            },
+          },
+          {
+            "type": "section",
+            "block_id": "section-bulk-adsets",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*Bulk Import* Facebook Adsets",
+            },
+            "accessory": {
+              "type": "button",
+              "text": {
+                "type": "plain_text",
+                "text": "Get Started",
+              },
+              "action_id": "button-bulk-fb-adsets",
+            },
+          },
         ],
       },
     });
