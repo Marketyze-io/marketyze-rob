@@ -52,8 +52,7 @@ const GoogleSheetsOAuthProvider = DefineOAuth2Provider({
  */
 export default Manifest({
   name: "Rob the Robot",
-  description:
-    "This is Rob. Rob is a robot. Good Bot. This copy of Rob is the Workflow App copy.",
+  description: "This is Rob. Rob is a robot. Good Bot.",
   icon: "assets/rob_icon.png",
   functions: [
     FbManagerStartModalFunction,
