@@ -51,9 +51,10 @@ const GoogleSheetsOAuthProvider = DefineOAuth2Provider({
  * https://api.slack.com/automation/manifest
  */
 export default Manifest({
-  name: "Marketyze Auth for Slack",
-  description: "A Slack App to help with authentication for external APIs",
-  icon: "assets/white_icon.png",
+  name: "Rob the Robot",
+  description:
+    "This is Rob. Rob is a robot. Good Bot. This copy of Rob is the Workflow App copy.",
+  icon: "assets/rob_icon.png",
   functions: [
     FbManagerStartModalFunction,
     FbMeFunction,
