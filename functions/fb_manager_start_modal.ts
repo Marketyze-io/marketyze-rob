@@ -188,7 +188,7 @@ export default SlackFunction(
               "type": "button",
               "text": {
                 "type": "plain_text",
-                "text": "Get Started",
+                "text": "Not working yet!",
               },
               "action_id": "button-single-fb-adsets",
             },
