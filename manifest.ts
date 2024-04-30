@@ -2,6 +2,7 @@ import { DefineOAuth2Provider, Manifest, Schema } from "deno-slack-sdk/mod.ts";
 import { FbManagerStartModalFunction } from "./functions/fb_manager_start_modal.ts";
 import fbManagerWorkflow from "./workflows/fb_manager_workflow.ts";
 import fbMeWorkflow from "./workflows/fb_me_workflow.ts";
+import sayHiWorkflow from "./workflows/say_hi_workflow.ts";
 import { FbMeFunction } from "./functions/fb_me.ts";
 
 const FbOAuthProvider = DefineOAuth2Provider({
@@ -58,7 +59,7 @@ export default Manifest({
     FbManagerStartModalFunction,
     FbMeFunction,
   ],
-  workflows: [fbManagerWorkflow, fbMeWorkflow],
+  workflows: [fbManagerWorkflow, fbMeWorkflow, sayHiWorkflow],
   outgoingDomains: [
     "graph.facebook.com",
     "facebook.com",
