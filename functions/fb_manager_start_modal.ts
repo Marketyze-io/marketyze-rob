@@ -158,7 +158,7 @@ const add_to_master_sheet_view = {
       "text": {
         "type": "plain_text",
         "text":
-          ":caution: Looks like that Ad Account isn't in my database. :caution:\n:hammer_and_wrench: Let's fix that! :hammer_and_wrench:",
+          ":warning: Looks like that Ad Account isn't in my database. :warning:\n\n:hammer_and_wrench: Let's fix that! :hammer_and_wrench:",
         "emoji": true,
       },
     },
