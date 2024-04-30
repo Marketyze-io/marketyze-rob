@@ -23,7 +23,7 @@ sayHiWorkflow.addStep(
   Schema.slack.functions.SendMessage,
   {
     channel_id: sayHiWorkflow.inputs.channel_id,
-    message: `Hi @${sayHiWorkflow.inputs.user_id}! \n :wave:`,
+    message: `Hi <@${sayHiWorkflow.inputs.user_id}>! :wave:`,
   },
 );
 
