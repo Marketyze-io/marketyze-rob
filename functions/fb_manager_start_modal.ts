@@ -19,6 +19,8 @@ let fb_name = "";
 let fb_id = "";
 let externalTokenFb: string | undefined = "";
 let externalTokenGs: string | undefined = "";
+let _ad_account_id: string;
+let _ad_account_name: string;
 
 // Function Definition
 export const FbManagerStartModalFunction = DefineFunction({
@@ -102,12 +104,60 @@ export default SlackFunction(
     fb_name = myApiResponse.name;
     fb_id = myApiResponse.id;
 
-    // Open the main menu
+    // Fetch ad accounts via API
+    const ad_accounts_response = await fetch(
+      `https://graph.facebook.com/v19.0/${fb_id}/adaccounts?fields=name`,
+      {
+        headers: new Headers({
+          "Authorization": `Bearer ${externalTokenFb}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        }),
+      },
+    );
+
+    // Handle the error if the /me endpoint was not called successfully
+    if (ad_accounts_response.status != 200) {
+      const body = await ad_accounts_response.text();
+      const error =
+        `Failed to call my endpoint! (status: ${ad_accounts_response.status}, body: ${body})`;
+      return { error };
+    }
+
+    // Format the response
+    const apiResponse = await ad_accounts_response.json();
+    console.log("Ad Accounts: ", apiResponse);
+    const adAccountData = apiResponse.data;
+
+    // Create options for the static select
+    const options: dropdownOption[] = [];
+    adAccountData.forEach((adAccount: { name: string; id: string }) => {
+      const option = {
+        "text": {
+          "type": "plain_text",
+          "text": adAccount.name,
+          "emoji": true,
+        },
+        "value": adAccount.id,
+      };
+      options.push(option);
+    });
+
+    // Open the Ad Account Form
     const response = await client.views.open({
       interactivity_pointer: inputs.interactivity.interactivity_pointer,
       view: {
         "type": "modal",
-        "callback_id": "fb-manager-menu",
+        "callback_id": "fb-ad-account-form",
+        "submit": {
+          "type": "plain_text",
+          "text": "Submit",
+          "emoji": true,
+        },
+        "close": {
+          "type": "plain_text",
+          "text": "Cancel",
+          "emoji": true,
+        },
         "title": {
           "type": "plain_text",
           "text": "FB Marketing",
@@ -117,96 +167,30 @@ export default SlackFunction(
             "type": "section",
             "text": {
               "type": "mrkdwn",
-              "text": `Hi ${fb_name}, here's what I can help you with:`,
+              "text":
+                `Hi ${fb_name}, which ad account are we working on today?`,
             },
           },
           {
             "type": "divider",
           },
           {
-            "type": "section",
-            "block_id": "section-update-pull",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Update* Ad Campaign data",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
+            "type": "input",
+            "block_id": "ad_account_id_dropdown",
+            "element": {
+              "type": "static_select",
+              "placeholder": {
                 "type": "plain_text",
-                "text": "Get Started",
+                "text": "Select an item",
+                "emoji": true,
               },
-              "action_id": "button-update-pull-fb-campaign",
+              "options": options,
+              "action_id": "ad_account_id_dropdown-action",
             },
-          },
-          {
-            "type": "divider",
-          },
-          {
-            "type": "section",
-            "block_id": "section-single-campaign",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Create Single* Facebook Ad Campaign",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-single-fb-campaign",
-            },
-          },
-          {
-            "type": "section",
-            "block_id": "section-bulk-campaigns",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Bulk Import* Facebook Ad Campaigns",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-bulk-fb-campaigns",
-            },
-          },
-          {
-            "type": "divider",
-          },
-          {
-            "type": "section",
-            "block_id": "section-single-adsets",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Create Single* Facebook Adset",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Not working yet!",
-              },
-              "action_id": "button-single-fb-adsets",
-            },
-          },
-          {
-            "type": "section",
-            "block_id": "section-bulk-adsets",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Bulk Import* Facebook Adsets",
-            },
-            "accessory": {
-              "type": "button",
-              "text": {
-                "type": "plain_text",
-                "text": "Get Started",
-              },
-              "action_id": "button-bulk-fb-adsets",
+            "label": {
+              "type": "plain_text",
+              "text": "Ad Account",
+              "emoji": true,
             },
           },
         ],
@@ -225,48 +209,144 @@ export default SlackFunction(
     };
   },
 )
+  // Ad account dropdown submission handler
+  .addViewSubmissionHandler(
+    "fb-ad-account-form",
+    ({ body }) => {
+      // Extract inputs
+      _ad_account_name = body.view.state
+        .values["ad_account_id_dropdown"]["ad_account_id_dropdown-action"]
+        .selected_option.text.text;
+      _ad_account_id = body.view.state
+        .values["ad_account_id_dropdown"]["ad_account_id_dropdown-action"]
+        .selected_option.value;
+
+      // Input validation
+      if (!_ad_account_id) {
+        const errors: formErrors = {};
+        errors["ad_account_id_dropdown"] = "Please select an ad account";
+        return {
+          response_action: "errors",
+          errors: errors,
+        };
+      }
+
+      // Open the main menu
+      return {
+        response_action: "update",
+        view: {
+          "type": "modal",
+          "callback_id": "fb-manager-menu",
+          "title": {
+            "type": "plain_text",
+            "text": "FB Marketing",
+          },
+          "blocks": [
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "Here's what I can help you with:",
+              },
+            },
+            {
+              "type": "divider",
+            },
+            {
+              "type": "section",
+              "block_id": "section-update-pull",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*Update* Ad Campaign data",
+              },
+              "accessory": {
+                "type": "button",
+                "text": {
+                  "type": "plain_text",
+                  "text": "Get Started",
+                },
+                "action_id": "button-update-pull-fb-campaign",
+              },
+            },
+            {
+              "type": "divider",
+            },
+            {
+              "type": "section",
+              "block_id": "section-single-campaign",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*Create Single* Facebook Ad Campaign",
+              },
+              "accessory": {
+                "type": "button",
+                "text": {
+                  "type": "plain_text",
+                  "text": "Get Started",
+                },
+                "action_id": "button-single-fb-campaign",
+              },
+            },
+            {
+              "type": "section",
+              "block_id": "section-bulk-campaigns",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*Bulk Import* Facebook Ad Campaigns",
+              },
+              "accessory": {
+                "type": "button",
+                "text": {
+                  "type": "plain_text",
+                  "text": "Get Started",
+                },
+                "action_id": "button-bulk-fb-campaigns",
+              },
+            },
+            {
+              "type": "divider",
+            },
+            {
+              "type": "section",
+              "block_id": "section-single-adsets",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*Create Single* Facebook Adset",
+              },
+              "accessory": {
+                "type": "button",
+                "text": {
+                  "type": "plain_text",
+                  "text": "Not working yet!",
+                },
+                "action_id": "button-single-fb-adsets",
+              },
+            },
+            {
+              "type": "section",
+              "block_id": "section-bulk-adsets",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*Bulk Import* Facebook Adsets",
+              },
+              "accessory": {
+                "type": "button",
+                "text": {
+                  "type": "plain_text",
+                  "text": "Get Started",
+                },
+                "action_id": "button-bulk-fb-adsets",
+              },
+            },
+          ],
+        },
+      };
+    },
+  )
   // Ad Campaigns Update (Pull only) Handler
   .addBlockActionsHandler(
     "button-update-pull-fb-campaign",
     async ({ body, client }) => {
-      // Fetch ad accounts via API
-      const me_response = await fetch(
-        `https://graph.facebook.com/v19.0/${fb_id}/adaccounts?fields=name`,
-        {
-          headers: new Headers({
-            "Authorization": `Bearer ${externalTokenFb}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-          }),
-        },
-      );
-
-      // Handle the error if the /me endpoint was not called successfully
-      if (me_response.status != 200) {
-        const body = await me_response.text();
-        const error =
-          `Failed to call my endpoint! (status: ${me_response.status}, body: ${body})`;
-        return { error };
-      }
-
-      // Format the response
-      const myApiResponse = await me_response.json();
-      console.log("Ad Accounts: ", myApiResponse);
-      const adAccountData = myApiResponse.data;
-
-      // Create options for the static select
-      const options: dropdownOption[] = [];
-      adAccountData.forEach((adAccount: { name: string; id: string }) => {
-        const option = {
-          "text": {
-            "type": "plain_text",
-            "text": adAccount.name,
-            "emoji": true,
-          },
-          "value": adAccount.id,
-        };
-        options.push(option);
-      });
-
       // Update the modal with a new view
       const response = await client.views.update({
         interactivity_pointer: body.interactivity.interactivity_pointer,
@@ -301,25 +381,6 @@ export default SlackFunction(
             },
             {
               "type": "divider",
-            },
-            {
-              "type": "input",
-              "block_id": "ad_account_id_dropdown",
-              "element": {
-                "type": "static_select",
-                "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select an item",
-                  "emoji": true,
-                },
-                "options": options,
-                "action_id": "ad_account_id_dropdown-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Ad Account",
-                "emoji": true,
-              },
             },
             {
               "type": "input",
