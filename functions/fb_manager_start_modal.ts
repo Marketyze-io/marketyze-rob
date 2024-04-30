@@ -482,6 +482,11 @@ export default SlackFunction(
       }
       _spreadsheet_id = gs_master_json[2][index];
 
+      // TEST: Check the three main global values
+      console.log("Ad Account Name: ", _ad_account_name);
+      console.log("Ad Account ID: ", _ad_account_id);
+      console.log("Spreadsheet ID: ", _spreadsheet_id);
+
       // Open the main menu
       return {
         response_action: "update",
@@ -1019,6 +1024,11 @@ export default SlackFunction(
       }
 
       _spreadsheet_id = spreadsheet_id;
+
+      // TEST: Check the three main global values
+      console.log("Ad Account Name: ", _ad_account_name);
+      console.log("Ad Account ID: ", _ad_account_id);
+      console.log("Spreadsheet ID: ", _spreadsheet_id);
 
       // Open the main menu
       return {
