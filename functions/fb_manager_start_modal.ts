@@ -157,7 +157,8 @@ const add_to_master_sheet_view = {
       "type": "section",
       "text": {
         "type": "plain_text",
-        "text": "Let's get that Ad Account added to the Master Sheet!",
+        "text":
+          ":caution: Looks like that Ad Account isn't in my database. :caution:\n:hammer_and_wrench: Let's fix that! :hammer_and_wrench:",
         "emoji": true,
       },
     },
@@ -455,10 +456,19 @@ export default SlackFunction(
       const gs_row_count = gs_count_json.values[0][0] as number;
       console.log("gs_row_count: ", gs_row_count);
 
+      //Check if spreadsheet is empty
+      if (gs_row_count == 0) {
+        // Open modal to add ad account to master sheet
+        return {
+          response_action: "update",
+          view: add_to_master_sheet_view,
+        };
+      }
+
       // Retrieve the campaign id table from the master sheet
       const gs_master_endpoint = GOOGLE_SHEETS_ROOT_URL + MASTER_SHEET_ID +
-        "/values/'spreadsheet-master-list'!A3:C" + (3 + gs_row_count) +
-        "?majorDimension=COLUMNS" + "?access_token=" + externalTokenGs;
+        "/values/'spreadsheet-master-list'!A3:C" + String(3 + gs_row_count) +
+        "?majorDimension=COLUMNS" + "&access_token=" + externalTokenGs;
       const gs_master_response = await fetch(gs_master_endpoint);
 
       // Handle the error if the gs_count endpoint was not called successfully
@@ -471,16 +481,21 @@ export default SlackFunction(
 
       // Find the spreadsheet id
       const gs_master_json = await gs_master_response.json();
-      const index = gs_master_json[1].findIndex(_ad_account_id);
+      console.log("gs_master_json: ", gs_master_json);
+      const index: number = gs_master_json.values[1].indexOf(
+        _ad_account_id,
+      );
+      console.log("index: ", index);
+      console.log("typeof index: ", typeof index);
       // Check if ad account was missing from the master sheet
-      if (index == -1) {
+      if (index < 0) {
         // Open modal to add ad account to master sheet
         return {
           response_action: "update",
           view: add_to_master_sheet_view,
         };
       }
-      _spreadsheet_id = gs_master_json[2][index];
+      _spreadsheet_id = gs_master_json.values[2][index];
 
       // TEST: Check the three main global values
       console.log("Ad Account Name: ", _ad_account_name);
