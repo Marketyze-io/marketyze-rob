@@ -779,32 +779,6 @@ export default SlackFunction(
                 "emoji": true,
               },
             },
-            {
-              "type": "input",
-              "block_id": "ad_acc_id_input",
-              "element": {
-                "type": "plain_text_input",
-                "action_id": "ad_acc_id_input-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Ad Account ID",
-                "emoji": true,
-              },
-            },
-            {
-              "type": "input",
-              "block_id": "token_input",
-              "element": {
-                "type": "plain_text_input",
-                "action_id": "token_input-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Access Token",
-                "emoji": true,
-              },
-            },
           ],
         },
       });
@@ -821,44 +795,6 @@ export default SlackFunction(
   .addBlockActionsHandler(
     "button-bulk-fb-adsets",
     async ({ body, client }) => {
-      // Fetch ad accounts via API
-      const me_response = await fetch(
-        `https://graph.facebook.com/v19.0/${fb_id}/adaccounts?fields=name`,
-        {
-          headers: new Headers({
-            "Authorization": `Bearer ${externalTokenFb}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-          }),
-        },
-      );
-
-      // Handle the error if the /me endpoint was not called successfully
-      if (me_response.status != 200) {
-        const body = await me_response.text();
-        const error =
-          `Failed to call my endpoint! (status: ${me_response.status}, body: ${body})`;
-        return { error };
-      }
-
-      // Format the response
-      const myApiResponse = await me_response.json();
-      console.log("Ad Accounts: ", myApiResponse);
-      const adAccountData = myApiResponse.data;
-
-      // Create options for the static select
-      const options: dropdownOption[] = [];
-      adAccountData.forEach((adAccount: { name: string; id: string }) => {
-        const option = {
-          "text": {
-            "type": "plain_text",
-            "text": adAccount.name,
-            "emoji": true,
-          },
-          "value": adAccount.id,
-        };
-        options.push(option);
-      });
-
       // Update the modal with a new view
       const response = await client.views.update({
         interactivity_pointer: body.interactivity.interactivity_pointer,
@@ -893,25 +829,6 @@ export default SlackFunction(
             },
             {
               "type": "divider",
-            },
-            {
-              "type": "input",
-              "block_id": "ad_account_id_dropdown",
-              "element": {
-                "type": "static_select",
-                "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select an item",
-                  "emoji": true,
-                },
-                "options": options,
-                "action_id": "ad_account_id_dropdown-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Ad Account",
-                "emoji": true,
-              },
             },
             {
               "type": "input",
@@ -1203,12 +1120,8 @@ export default SlackFunction(
   .addViewSubmissionHandler(
     "fbBulkAdsets-form",
     async ({ inputs, body, client }) => {
-      const ad_account_name = body.view.state
-        .values["ad_account_id_dropdown"]["ad_account_id_dropdown-action"]
-        .selected_option.text.text;
-      const ad_account_id = body.view.state
-        .values["ad_account_id_dropdown"]["ad_account_id_dropdown-action"]
-        .selected_option.value;
+      const ad_account_name = _ad_account_name;
+      const ad_account_id = _ad_account_id;
       const spreadsheet_url = body.view.state
         .values["spreadsheet_url_input"]["spreadsheet_url_input-action"].value;
 
