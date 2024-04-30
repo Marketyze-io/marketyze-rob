@@ -1011,6 +1011,7 @@ export default SlackFunction(
       const gs_append_endpoint = GOOGLE_SHEETS_ROOT_URL + MASTER_SHEET_ID +
         "/values/'spreadsheet-master-list'!A3:append?access_token=" +
         externalTokenGs;
+      console.log("gs_append_endpoint: ", gs_append_endpoint);
       const gs_append_body = {
         "majorDimension": "ROWS",
         "values": [[
@@ -1029,6 +1030,7 @@ export default SlackFunction(
           body: JSON.stringify(gs_append_body),
         },
       );
+      console.log("gs_append_response: ", gs_append_response);
 
       // Handle the error if the gs_append endpoint was not called successfully
       if (gs_append_response.status != 200) {
