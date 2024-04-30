@@ -15,12 +15,217 @@ interface formErrors {
   [key: string]: string;
 }
 
+const GOOGLE_SHEETS_ROOT_URL = "https://sheets.googleapis.com/v4/spreadsheets/";
+const MASTER_SHEET_ID = "1am9nNSWcUYpbvHFA8nk0GAvzedYvyBGTqNNT9YAX0wM";
+
 let fb_name = "";
 let fb_id = "";
 let externalTokenFb: string | undefined = "";
 let externalTokenGs: string | undefined = "";
 let _ad_account_id: string;
 let _ad_account_name: string;
+let _spreadsheet_id: string;
+
+// static views
+const main_menu_view = {
+  "type": "modal",
+  "callback_id": "fb-manager-menu",
+  "title": {
+    "type": "plain_text",
+    "text": "FB Marketing",
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Here's what I can help you with:",
+      },
+    },
+    {
+      "type": "divider",
+    },
+    {
+      "type": "section",
+      "block_id": "section-update-pull",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Update* Ad Campaign data",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Get Started",
+        },
+        "action_id": "button-update-pull-fb-campaign",
+      },
+    },
+    {
+      "type": "divider",
+    },
+    {
+      "type": "section",
+      "block_id": "section-single-campaign",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Create Single* Facebook Ad Campaign",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Get Started",
+        },
+        "action_id": "button-single-fb-campaign",
+      },
+    },
+    {
+      "type": "section",
+      "block_id": "section-bulk-campaigns",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Bulk Import* Facebook Ad Campaigns",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Get Started",
+        },
+        "action_id": "button-bulk-fb-campaigns",
+      },
+    },
+    {
+      "type": "divider",
+    },
+    {
+      "type": "section",
+      "block_id": "section-single-adsets",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Create Single* Facebook Adset",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Not working yet!",
+        },
+        "action_id": "button-single-fb-adsets",
+      },
+    },
+    {
+      "type": "section",
+      "block_id": "section-bulk-adsets",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Bulk Import* Facebook Adsets",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Get Started",
+        },
+        "action_id": "button-bulk-fb-adsets",
+      },
+    },
+  ],
+};
+
+const add_to_master_sheet_view = {
+  "type": "modal",
+  "callback_id": "addToMasterSheet-form",
+  "submit": {
+    "type": "plain_text",
+    "text": "Submit",
+    "emoji": true,
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Cancel",
+    "emoji": true,
+  },
+  "title": {
+    "type": "plain_text",
+    "text": "Facebook Marketing",
+    "emoji": true,
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "plain_text",
+        "text": "Let's get that Ad Account added to the Master Sheet!",
+        "emoji": true,
+      },
+    },
+    {
+      "type": "divider",
+    },
+    {
+      "type": "input",
+      "block_id": "spreadsheet_url_input",
+      "element": {
+        "type": "url_text_input",
+        "action_id": "spreadsheet_url_input-action",
+      },
+      "label": {
+        "type": "plain_text",
+        "text": "Spreadsheet URL",
+        "emoji": true,
+      },
+    },
+  ],
+};
+
+const bulk_campaigns_view = {
+  "type": "modal",
+  "callback_id": "fbBulkCampaign-form",
+  "submit": {
+    "type": "plain_text",
+    "text": "Submit",
+    "emoji": true,
+  },
+  "close": {
+    "type": "plain_text",
+    "text": "Cancel",
+    "emoji": true,
+  },
+  "title": {
+    "type": "plain_text",
+    "text": "Facebook Campaigns",
+    "emoji": true,
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "plain_text",
+        "text":
+          `Hi ${fb_name}! :wave:\n\nHere's the info I need before I can create those campaigns for you.`,
+        "emoji": true,
+      },
+    },
+    {
+      "type": "divider",
+    },
+    {
+      "type": "input",
+      "block_id": "spreadsheet_url_input",
+      "element": {
+        "type": "url_text_input",
+        "action_id": "spreadsheet_url_input-action",
+      },
+      "label": {
+        "type": "plain_text",
+        "text": "Spreadsheet URL",
+        "emoji": true,
+      },
+    },
+  ],
+};
 
 // Function Definition
 export const FbManagerStartModalFunction = DefineFunction({
@@ -212,7 +417,7 @@ export default SlackFunction(
   // Ad account dropdown submission handler
   .addViewSubmissionHandler(
     "fb-ad-account-form",
-    ({ body }) => {
+    async ({ body }) => {
       // Extract inputs
       _ad_account_name = body.view.state
         .values["ad_account_id_dropdown"]["ad_account_id_dropdown-action"]
@@ -231,115 +436,56 @@ export default SlackFunction(
         };
       }
 
+      // Retrieve the row count from the master sheet
+      const gs_count_endpoint = GOOGLE_SHEETS_ROOT_URL + MASTER_SHEET_ID +
+        "/values/'spreadsheet-master-list'!B1?access_token=" + externalTokenGs;
+      const gs_count_response = await fetch(gs_count_endpoint);
+
+      // Handle the error if the gs_count endpoint was not called successfully
+      if (gs_count_response.status != 200) {
+        const body = await gs_count_response.text();
+        const error =
+          `Failed to call gs endpoint! (status: ${gs_count_response.status}, body: ${body})`;
+        return { error };
+      }
+
+      // Format the response
+      const gs_count_json = await gs_count_response.json();
+      console.log("gs_count_json: ", gs_count_json);
+      const gs_row_count = gs_count_json.values[0][0] as number;
+      console.log("gs_row_count: ", gs_row_count);
+
+      // Retrieve the campaign id table from the master sheet
+      const gs_master_endpoint = GOOGLE_SHEETS_ROOT_URL + MASTER_SHEET_ID +
+        "/values/'spreadsheet-master-list'!A3:C" + (3 + gs_row_count) +
+        "?majorDimension=COLUMNS" + "?access_token=" + externalTokenGs;
+      const gs_master_response = await fetch(gs_master_endpoint);
+
+      // Handle the error if the gs_count endpoint was not called successfully
+      if (gs_master_response.status != 200) {
+        const body = await gs_master_response.text();
+        const error =
+          `Failed to call gs endpoint! (status: ${gs_master_response.status}, body: ${body})`;
+        return { error };
+      }
+
+      // Find the spreadsheet id
+      const gs_master_json = await gs_master_response.json();
+      const index = gs_master_json[1].findIndex(_ad_account_id);
+      // Check if ad account was missing from the master sheet
+      if (index == -1) {
+        // Open modal to add ad account to master sheet
+        return {
+          response_action: "update",
+          view: add_to_master_sheet_view,
+        };
+      }
+      _spreadsheet_id = gs_master_json[2][index];
+
       // Open the main menu
       return {
         response_action: "update",
-        view: {
-          "type": "modal",
-          "callback_id": "fb-manager-menu",
-          "title": {
-            "type": "plain_text",
-            "text": "FB Marketing",
-          },
-          "blocks": [
-            {
-              "type": "section",
-              "text": {
-                "type": "mrkdwn",
-                "text": "Here's what I can help you with:",
-              },
-            },
-            {
-              "type": "divider",
-            },
-            {
-              "type": "section",
-              "block_id": "section-update-pull",
-              "text": {
-                "type": "mrkdwn",
-                "text": "*Update* Ad Campaign data",
-              },
-              "accessory": {
-                "type": "button",
-                "text": {
-                  "type": "plain_text",
-                  "text": "Get Started",
-                },
-                "action_id": "button-update-pull-fb-campaign",
-              },
-            },
-            {
-              "type": "divider",
-            },
-            {
-              "type": "section",
-              "block_id": "section-single-campaign",
-              "text": {
-                "type": "mrkdwn",
-                "text": "*Create Single* Facebook Ad Campaign",
-              },
-              "accessory": {
-                "type": "button",
-                "text": {
-                  "type": "plain_text",
-                  "text": "Get Started",
-                },
-                "action_id": "button-single-fb-campaign",
-              },
-            },
-            {
-              "type": "section",
-              "block_id": "section-bulk-campaigns",
-              "text": {
-                "type": "mrkdwn",
-                "text": "*Bulk Import* Facebook Ad Campaigns",
-              },
-              "accessory": {
-                "type": "button",
-                "text": {
-                  "type": "plain_text",
-                  "text": "Get Started",
-                },
-                "action_id": "button-bulk-fb-campaigns",
-              },
-            },
-            {
-              "type": "divider",
-            },
-            {
-              "type": "section",
-              "block_id": "section-single-adsets",
-              "text": {
-                "type": "mrkdwn",
-                "text": "*Create Single* Facebook Adset",
-              },
-              "accessory": {
-                "type": "button",
-                "text": {
-                  "type": "plain_text",
-                  "text": "Not working yet!",
-                },
-                "action_id": "button-single-fb-adsets",
-              },
-            },
-            {
-              "type": "section",
-              "block_id": "section-bulk-adsets",
-              "text": {
-                "type": "mrkdwn",
-                "text": "*Bulk Import* Facebook Adsets",
-              },
-              "accessory": {
-                "type": "button",
-                "text": {
-                  "type": "plain_text",
-                  "text": "Get Started",
-                },
-                "action_id": "button-bulk-fb-adsets",
-              },
-            },
-          ],
-        },
+        view: main_menu_view,
       };
     },
   )
@@ -672,52 +818,7 @@ export default SlackFunction(
       const response = await client.views.push({
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
-        view: {
-          "type": "modal",
-          "callback_id": "fbBulkCampaign-form",
-          "submit": {
-            "type": "plain_text",
-            "text": "Submit",
-            "emoji": true,
-          },
-          "close": {
-            "type": "plain_text",
-            "text": "Cancel",
-            "emoji": true,
-          },
-          "title": {
-            "type": "plain_text",
-            "text": "Facebook Campaigns",
-            "emoji": true,
-          },
-          "blocks": [
-            {
-              "type": "section",
-              "text": {
-                "type": "plain_text",
-                "text":
-                  `Hi ${fb_name}! :wave:\n\nHere's the info I need before I can create those campaigns for you.`,
-                "emoji": true,
-              },
-            },
-            {
-              "type": "divider",
-            },
-            {
-              "type": "input",
-              "block_id": "spreadsheet_url_input",
-              "element": {
-                "type": "url_text_input",
-                "action_id": "spreadsheet_url_input-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Spreadsheet URL",
-                "emoji": true,
-              },
-            },
-          ],
-        },
+        view: bulk_campaigns_view,
       });
       if (response.error) {
         const error = `Failed to update a modal due to ${response.error}`;
@@ -852,6 +953,77 @@ export default SlackFunction(
       }
       return {
         completed: false,
+      };
+    },
+  )
+  // Add to Master Sheet Submission Handler
+  .addViewSubmissionHandler(
+    "addToMasterSheet-form",
+    async ({ body }) => {
+      const spreadsheet_url = body.view.state
+        .values["spreadsheet_url_input"]["spreadsheet_url_input-action"]
+        .value;
+
+      // Form validation
+      const errors: formErrors = {};
+      const isValidUrl = new RegExp(
+        "^(https?://)?(www.)?(docs.google.com/spreadsheets/d/)([a-zA-Z0-9-_]+)",
+      );
+      if (!isValidUrl.test(spreadsheet_url)) {
+        errors["spreadsheet_url_input"] =
+          "Please enter a valid spreadsheet URL";
+      }
+      if (Object.keys(errors).length > 0) {
+        console.log({
+          response_action: "errors",
+          errors: errors,
+        });
+        return {
+          response_action: "errors",
+          errors: errors,
+        };
+      }
+
+      const spreadsheet_id = spreadsheet_url.split("/")[5];
+      console.log("Spreadsheet ID: ", spreadsheet_id);
+
+      // Add spreadsheet id to master sheet
+      const gs_append_endpoint = GOOGLE_SHEETS_ROOT_URL + MASTER_SHEET_ID +
+        "/values/'spreadsheet-master-list'!A3:append?access_token=" +
+        externalTokenGs;
+      const gs_append_body = {
+        "majorDimension": "ROWS",
+        "values": [[
+          _ad_account_name,
+          _ad_account_id,
+          spreadsheet_id,
+        ]],
+      };
+      const gs_append_response = await fetch(
+        gs_append_endpoint,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(gs_append_body),
+        },
+      );
+
+      // Handle the error if the gs_append endpoint was not called successfully
+      if (gs_append_response.status != 200) {
+        const body = await gs_append_response.text();
+        const error =
+          `Failed to call gs endpoint! (status: ${gs_append_response.status}, body: ${body})`;
+        return { error };
+      }
+
+      _spreadsheet_id = spreadsheet_id;
+
+      // Open the main menu
+      return {
+        response_action: "update",
+        view: main_menu_view,
       };
     },
   )
