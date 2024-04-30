@@ -375,7 +375,7 @@ export default SlackFunction(
               "text": {
                 "type": "plain_text",
                 "text":
-                  `Hi ${fb_name}! :wave:\n\nPick an ad account and spreadsheet to update.`,
+                  `Hi ${fb_name}! :wave:\n\nPick a spreadsheet to update.`,
                 "emoji": true,
               },
             },
@@ -1056,20 +1056,13 @@ export default SlackFunction(
   .addViewSubmissionHandler(
     "fbCampaign-updatePull-form",
     async ({ inputs, body, client }) => {
-      const ad_account_name = body.view.state
-        .values["ad_account_id_dropdown"]["ad_account_id_dropdown-action"]
-        .selected_option.text.text;
-      const ad_account_id = body.view.state
-        .values["ad_account_id_dropdown"]["ad_account_id_dropdown-action"]
-        .selected_option.value;
+      const ad_account_name = _ad_account_name;
+      const ad_account_id = _ad_account_id;
       const spreadsheet_url = body.view.state
         .values["spreadsheet_url_input"]["spreadsheet_url_input-action"].value;
 
       // Form validation
       const errors: formErrors = {};
-      if (!ad_account_id) {
-        errors["ad_account_id_dropdown"] = "Please select an ad account";
-      }
       const isValidUrl = new RegExp(
         "^(https?://)?(www.)?(docs.google.com/spreadsheets/d/)([a-zA-Z0-9-_]+)",
       );
@@ -1094,9 +1087,8 @@ export default SlackFunction(
       const spreadsheet_id = spreadsheet_url.split("/")[5];
       console.log("Spreadsheet ID: ", spreadsheet_id);
 
-      const ephemeralResponse = await client.chat.postEphemeral({
+      const chatResponse = await client.chat.postMessage({
         channel: inputs.channel_id,
-        user: inputs.user_id,
         text:
           `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
         I'm going to update these accounts:\n 
@@ -1104,10 +1096,10 @@ export default SlackFunction(
         - Ad Account ID: ${ad_account_id}\n 
         - Spreadsheet URL: ${spreadsheet_url}`,
       });
-      if (!ephemeralResponse.ok) {
+      if (!chatResponse.ok) {
         console.log(
-          "Failed to send an ephemeral message",
-          ephemeralResponse.error,
+          "Failed to send a chat message",
+          chatResponse.error,
         );
       }
 
