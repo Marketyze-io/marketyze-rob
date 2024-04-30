@@ -348,7 +348,7 @@ export default SlackFunction(
     "button-update-pull-fb-campaign",
     async ({ body, client }) => {
       // Update the modal with a new view
-      const response = await client.views.update({
+      const response = await client.views.push({
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
         view: {
@@ -412,7 +412,7 @@ export default SlackFunction(
     "button-single-fb-campaign",
     async ({ body, client }) => {
       // Update the modal with a new view
-      const response = await client.views.update({
+      const response = await client.views.push({
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
         view: {
@@ -669,7 +669,7 @@ export default SlackFunction(
     "button-bulk-fb-campaigns",
     async ({ body, client }) => {
       // Update the modal with a new view
-      const response = await client.views.update({
+      const response = await client.views.push({
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
         view: {
@@ -732,7 +732,7 @@ export default SlackFunction(
   .addBlockActionsHandler(
     "button-single-fb-adsets",
     async ({ body, client }) => {
-      const response = await client.views.update({
+      const response = await client.views.push({
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
         view: {
@@ -796,7 +796,7 @@ export default SlackFunction(
     "button-bulk-fb-adsets",
     async ({ body, client }) => {
       // Update the modal with a new view
-      const response = await client.views.update({
+      const response = await client.views.push({
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
         view: {
