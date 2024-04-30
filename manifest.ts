@@ -76,6 +76,7 @@ export default Manifest({
     "datastore:read",
     "datastore:write",
     "triggers:write",
+    "app_mentions:read",
   ],
   externalAuthProviders: [FbOAuthProvider, GoogleSheetsOAuthProvider],
 });
