@@ -216,53 +216,6 @@ const add_to_master_sheet_view = {
   ],
 };
 
-const bulk_campaigns_view = {
-  "type": "modal",
-  "callback_id": "fbBulkCampaign-form",
-  "submit": {
-    "type": "plain_text",
-    "text": "Submit",
-    "emoji": true,
-  },
-  "close": {
-    "type": "plain_text",
-    "text": "Cancel",
-    "emoji": true,
-  },
-  "title": {
-    "type": "plain_text",
-    "text": "Facebook Campaigns",
-    "emoji": true,
-  },
-  "blocks": [
-    {
-      "type": "section",
-      "text": {
-        "type": "plain_text",
-        "text":
-          `Hi ${fb_name}! :wave:\n\nHere's the info I need before I can create those campaigns for you.`,
-        "emoji": true,
-      },
-    },
-    {
-      "type": "divider",
-    },
-    {
-      "type": "input",
-      "block_id": "spreadsheet_url_input",
-      "element": {
-        "type": "url_text_input",
-        "action_id": "spreadsheet_url_input-action",
-      },
-      "label": {
-        "type": "plain_text",
-        "text": "Spreadsheet URL",
-        "emoji": true,
-      },
-    },
-  ],
-};
-
 const targeting_specs_menu_view = {
   "type": "modal",
   "callback_id": "targeting-specs-menu",
@@ -366,6 +319,62 @@ const targeting_specs_menu_view = {
     },
   ],
 };
+
+function bulk_campaigns_success_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbBulkCampaign-success",
+    "close": {
+      "type": "plain_text",
+      "text": "Close",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": "Facebook Campaigns",
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:muscle: I'll get to work on creating those campaigns for ${ad_account_name}! :muscle:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function bulk_campaigns_failed_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbBulkCampaign-failure",
+    "close": {
+      "type": "plain_text",
+      "text": "Close",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": "Facebook Campaigns",
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:warning: Something went wrong when starting work on the campaigns for ${ad_account_name}! :warning:\n This is probably a bug, please let my maintainers know.`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
 
 function update_saved_audiences_success_view(ad_account_name: string) {
   return {
@@ -707,7 +716,7 @@ export default SlackFunction(
   // Update Saved Audiences Button Handler
   .addBlockActionsHandler(
     "button-update-saved-audiences",
-    async () => {
+    async ({ client, body }) => {
       // Call the lambda function to update saved audiences
       const update_saved_audiences_endpoint =
         "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/audiences/update";
@@ -729,19 +738,32 @@ export default SlackFunction(
 
       // Handle the error if the lambda function was not called successfully
       if (update_saved_audiences_response.status != 200) {
-        const body = await update_saved_audiences_response.text();
+        const response_text = await update_saved_audiences_response.text();
         const _error =
-          `Failed to call lambda function! (status: ${update_saved_audiences_response.status}, body: ${body})`;
-        return {
-          response_action: "push",
+          `Failed to call lambda function! (status: ${update_saved_audiences_response.status}, body: ${response_text})`;
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
           view: update_saved_audiences_failed_view(_ad_account_name),
-        };
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
       }
 
       // Update the modal with a new view
-      return {
-        response_action: "push",
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
         view: update_saved_audiences_success_view(_ad_account_name),
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
       };
     },
   )
@@ -1069,12 +1091,48 @@ export default SlackFunction(
   // Bulk Campaigns Button Handler
   .addBlockActionsHandler(
     "button-bulk-fb-campaigns",
-    async ({ body, client }) => {
+    async ({ inputs, body, client }) => {
+      // Prepare the lambda function payload
+      const payload = {
+        "channel_id": inputs.channel_id,
+        "ad_account_id": _ad_account_id,
+        "spreadsheet_id": _spreadsheet_id,
+        "fb_access_token": externalTokenFb,
+        "gs_access_token": externalTokenGs,
+      };
+
+      // Call the lambda function to create bulk campaigns
+      const bulk_campaigns_response = await fetch(
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/bulk",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (bulk_campaigns_response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${bulk_campaigns_response.status})`;
+        console.log(error);
+        console.log(bulk_campaigns_response);
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: bulk_campaigns_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
+      }
+
       // Update the modal with a new view
       const response = await client.views.push({
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
-        view: bulk_campaigns_view,
+        view: bulk_campaigns_success_view(_ad_account_name),
       });
       if (response.error) {
         const error = `Failed to update a modal due to ${response.error}`;
@@ -1484,90 +1542,6 @@ export default SlackFunction(
         }
         return;
       }
-    },
-  )
-  // Bulk Campaigns Submission Handler
-  .addViewSubmissionHandler(
-    "fbBulkCampaign-form",
-    async ({ inputs, body, client }) => {
-      const ad_account_name = _ad_account_name;
-      const ad_account_id = _ad_account_id;
-      const spreadsheet_url = body.view.state
-        .values["spreadsheet_url_input"]["spreadsheet_url_input-action"].value;
-
-      // Form validation
-      const errors: formErrors = {};
-      if (!ad_account_id) {
-        errors["ad_account_id_dropdown"] = "Please select an ad account";
-      }
-      const isValidUrl = new RegExp(
-        "^(https?://)?(www.)?(docs.google.com/spreadsheets/d/)([a-zA-Z0-9-_]+)",
-      );
-      if (!spreadsheet_url) {
-        errors["spreadsheet_url_input"] = "Please enter a spreadsheet URL";
-      } else if (!isValidUrl.test(spreadsheet_url)) {
-        errors["spreadsheet_url_input"] =
-          "Please enter a valid spreadsheet URL";
-      }
-
-      if (Object.keys(errors).length > 0) {
-        console.log({
-          response_action: "errors",
-          errors: errors,
-        });
-        return {
-          response_action: "errors",
-          errors: errors,
-        };
-      }
-
-      const spreadsheet_id = spreadsheet_url.split("/")[5];
-      console.log("Spreadsheet ID: ", spreadsheet_id);
-
-      const ephemeralResponse = await client.chat.postEphemeral({
-        channel: inputs.channel_id,
-        user: inputs.user_id,
-        text:
-          `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
-        Here's what I received:\n 
-        - Ad Account: ${ad_account_name}\n 
-        - Ad Account ID: ${ad_account_id}\n 
-        - Spreadsheet URL: ${spreadsheet_url}`,
-      });
-      if (!ephemeralResponse.ok) {
-        console.log(
-          "Failed to send an ephemeral message",
-          ephemeralResponse.error,
-        );
-      }
-
-      const payload = {
-        "channel_id": inputs.channel_id,
-        "ad_account_id": ad_account_id,
-        "spreadsheet_id": spreadsheet_id,
-        "fb_access_token": externalTokenFb,
-        "gs_access_token": externalTokenGs,
-      };
-
-      const response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/bulk",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-      if (response.status != 200) {
-        const error =
-          `Failed to call the API endpoint! (status: ${response.status})`;
-        console.log(error);
-        console.log(response);
-        return { error };
-      }
-
-      return;
     },
   )
   // Adset Submission Handler (TODO)
