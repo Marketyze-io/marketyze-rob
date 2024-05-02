@@ -1010,9 +1010,10 @@ export default SlackFunction(
       // Add spreadsheet id to master sheet
       const gs_append_endpoint = GOOGLE_SHEETS_ROOT_URL + MASTER_SHEET_ID +
         "/values/'spreadsheet-master-list'!A3:append?access_token=" +
-        externalTokenGs;
+        externalTokenGs + "&valueInputOption=USER_ENTERED";
       console.log("gs_append_endpoint: ", gs_append_endpoint);
       const gs_append_body = {
+        "range": "'spreadsheet-master-list'!A3",
         "majorDimension": "ROWS",
         "values": [[
           _ad_account_name,
