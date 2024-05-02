@@ -47,6 +47,22 @@ const main_menu_view = {
     },
     {
       "type": "section",
+      "block_id": "section-update-audiences",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Update* Saved Audiences",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Get Started",
+        },
+        "action_id": "button-update-saved-audiences",
+      },
+    },
+    {
+      "type": "section",
       "block_id": "section-update-pull",
       "text": {
         "type": "mrkdwn",
