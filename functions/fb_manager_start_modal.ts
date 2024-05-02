@@ -247,6 +247,110 @@ const bulk_campaigns_view = {
   ],
 };
 
+const targeting_specs_menu_view = {
+  "type": "modal",
+  "callback_id": "targeting-specs-menu",
+  "title": {
+    "type": "plain_text",
+    "text": "FB Targeting Specs",
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Here's what I can help you with:",
+      },
+    },
+    {
+      "type": "divider",
+    },
+    {
+      "type": "section",
+      "block_id": "section-create-targeting-spec",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Create* Targeting Spec",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Get Started",
+        },
+        "action_id": "button-create-targeting-spec",
+      },
+    },
+    {
+      "type": "section",
+      "block_id": "section-duplicate-targeting-spec",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Duplicate* Targeting Spec",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Get Started",
+        },
+        "action_id": "button-duplicate-targeting-spec",
+      },
+    },
+    {
+      "type": "section",
+      "block_id": "section-import-targeting-spec",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Import* Targeting Spec",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Get Started",
+        },
+        "action_id": "button-import-targeting-spec",
+      },
+    },
+    {
+      "type": "divider",
+    },
+    {
+      "type": "section",
+      "block_id": "section-update-targeting-spec",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Update* Targeting Spec",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Get Started",
+        },
+        "action_id": "button-update-targeting-spec",
+      },
+    },
+    {
+      "type": "section",
+      "block_id": "section-json-targeting-spec",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Create* Targeting Spec from JSON",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Get Started",
+        },
+        "action_id": "button-json-targeting-spec",
+      },
+    },
+  ],
+};
+
 // Function Definition
 export const FbManagerStartModalFunction = DefineFunction({
   callback_id: "fb-manager-start-modal",
@@ -985,6 +1089,25 @@ export default SlackFunction(
             },
           ],
         },
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
+      };
+    },
+  )
+  // Targeting Specs Handler
+  .addBlockActionsHandler(
+    "button-targeting-specs",
+    async ({ body, client }) => {
+      // Update the modal with a new view
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: targeting_specs_menu_view,
       });
       if (response.error) {
         const error = `Failed to update a modal due to ${response.error}`;
