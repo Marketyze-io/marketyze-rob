@@ -131,6 +131,25 @@ const main_menu_view = {
         "action_id": "button-bulk-fb-adsets",
       },
     },
+    {
+      "type": "divider",
+    },
+    {
+      "type": "section",
+      "block_id": "section-targeting-spec",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Manage* Targeting Specs",
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Not working yet",
+        },
+        "action_id": "button-targeting-specs",
+      },
+    },
   ],
 };
 
