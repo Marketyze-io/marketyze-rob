@@ -367,7 +367,7 @@ const targeting_specs_menu_view = {
   ],
 };
 
-function saved_audiences_success_view(ad_account_name: string) {
+function update_saved_audiences_success_view(ad_account_name: string) {
   return {
     "type": "modal",
     "callback_id": "fbSavedAudiences-success",
@@ -388,6 +388,34 @@ function saved_audiences_success_view(ad_account_name: string) {
           "type": "plain_text",
           "text":
             `:tada: The saved audiences for ${ad_account_name} have been updated successfully! :tada:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function update_saved_audiences_failed_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbSavedAudiences-failure",
+    "close": {
+      "type": "plain_text",
+      "text": "Close",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": "Facebook Saved Audiences",
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:warning: The saved audiences for ${ad_account_name} failed to update! :warning:`,
           "emoji": true,
         },
       },
@@ -679,7 +707,7 @@ export default SlackFunction(
   // Update Saved Audiences Button Handler
   .addBlockActionsHandler(
     "button-update-saved-audiences",
-    async ({ body, client }) => {
+    async () => {
       // Call the lambda function to update saved audiences
       const update_saved_audiences_endpoint =
         "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/audiences/update";
@@ -702,23 +730,18 @@ export default SlackFunction(
       // Handle the error if the lambda function was not called successfully
       if (update_saved_audiences_response.status != 200) {
         const body = await update_saved_audiences_response.text();
-        const error =
+        const _error =
           `Failed to call lambda function! (status: ${update_saved_audiences_response.status}, body: ${body})`;
-        return { error };
+        return {
+          response_action: "push",
+          view: update_saved_audiences_failed_view(_ad_account_name),
+        };
       }
 
       // Update the modal with a new view
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: saved_audiences_success_view(_ad_account_name),
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
       return {
-        completed: false,
+        response_action: "push",
+        view: update_saved_audiences_success_view(_ad_account_name),
       };
     },
   )
