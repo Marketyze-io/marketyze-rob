@@ -538,7 +538,7 @@ export default SlackFunction(
     };
   },
 )
-  // Ad account dropdown submission handler
+  // Ad Account Submission handler
   .addViewSubmissionHandler(
     "fb-ad-account-form",
     async ({ body }) => {
@@ -632,7 +632,7 @@ export default SlackFunction(
       };
     },
   )
-  // Ad Campaigns Update (Pull only) Handler
+  // Update Campaigns Button Handler
   .addBlockActionsHandler(
     "button-update-pull-fb-campaign",
     async ({ body, client }) => {
@@ -696,7 +696,7 @@ export default SlackFunction(
       };
     },
   )
-  // Single Ad Campaign Handler
+  // Create Campaign Button Handler
   .addBlockActionsHandler(
     "button-single-fb-campaign",
     async ({ body, client }) => {
@@ -953,7 +953,7 @@ export default SlackFunction(
       };
     },
   )
-  // Ad Campaigns Handler
+  // Bulk Campaigns Button Handler
   .addBlockActionsHandler(
     "button-bulk-fb-campaigns",
     async ({ body, client }) => {
@@ -972,7 +972,7 @@ export default SlackFunction(
       };
     },
   )
-  // Single Adset Handler (TODO)
+  // Adset Button Handler (TODO)
   .addBlockActionsHandler(
     "button-single-fb-adsets",
     async ({ body, client }) => {
@@ -1035,7 +1035,7 @@ export default SlackFunction(
       };
     },
   )
-  // Adsets Handler
+  // Bulk Adsets Button Handler
   .addBlockActionsHandler(
     "button-bulk-fb-adsets",
     async ({ body, client }) => {
@@ -1099,7 +1099,7 @@ export default SlackFunction(
       };
     },
   )
-  // Targeting Specs Handler
+  // Targeting Specs Button Handler
   .addBlockActionsHandler(
     "button-targeting-specs",
     async ({ body, client }) => {
@@ -1197,7 +1197,7 @@ export default SlackFunction(
       };
     },
   )
-  // Ad Campaigns Update (Pull only) Submission Handler
+  // Campaigns Update Submission Handler
   .addViewSubmissionHandler(
     "fbCampaign-updatePull-form",
     async ({ inputs, body, client }) => {
@@ -1277,7 +1277,7 @@ export default SlackFunction(
       return;
     },
   )
-  // Single Ad Campaign Submission Handler
+  // Campaign Submission Handler
   .addViewSubmissionHandler(
     "fbSingleCampaign-form",
     async ({ inputs, body, client }) => {
@@ -1373,7 +1373,7 @@ export default SlackFunction(
       }
     },
   )
-  // Ad Campaigns Submission Handler
+  // Bulk Campaigns Submission Handler
   .addViewSubmissionHandler(
     "fbBulkCampaign-form",
     async ({ inputs, body, client }) => {
@@ -1457,8 +1457,8 @@ export default SlackFunction(
       return;
     },
   )
-  // Single Adset Submission Handler (TODO)
-  // Adsets Submission Handler
+  // Adset Submission Handler (TODO)
+  // Bulk Adsets Submission Handler
   .addViewSubmissionHandler(
     "fbBulkAdsets-form",
     async ({ inputs, body, client }) => {
