@@ -326,12 +326,12 @@ function bulk_campaigns_success_view(ad_account_name: string) {
     "callback_id": "fbBulkCampaign-success",
     "close": {
       "type": "plain_text",
-      "text": "Close",
+      "text": "Back to Menu",
       "emoji": true,
     },
     "title": {
       "type": "plain_text",
-      "text": "Facebook Campaigns",
+      "text": `${ad_account_name} Campaigns`,
       "emoji": true,
     },
     "blocks": [
@@ -354,12 +354,12 @@ function bulk_campaigns_failed_view(ad_account_name: string) {
     "callback_id": "fbBulkCampaign-failure",
     "close": {
       "type": "plain_text",
-      "text": "Close",
+      "text": "Back to Menu",
       "emoji": true,
     },
     "title": {
       "type": "plain_text",
-      "text": "Facebook Campaigns",
+      "text": `${ad_account_name} Campaigns`,
       "emoji": true,
     },
     "blocks": [
@@ -369,6 +369,62 @@ function bulk_campaigns_failed_view(ad_account_name: string) {
           "type": "plain_text",
           "text":
             `:warning: Something went wrong when starting work on the campaigns for ${ad_account_name}! :warning:\n This is probably a bug, please let my maintainers know.`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function bulk_adsets_success_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbBulkAdsets-success",
+    "close": {
+      "type": "plain_text",
+      "text": "Back to Menu",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": `${ad_account_name} Adsets`,
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:muscle: I'll get to work on creating those adsets for ${ad_account_name}! :muscle:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function bulk_adsets_failed_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbBulkAdsets-failure",
+    "close": {
+      "type": "plain_text",
+      "text": "Back to Menu",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": `${ad_account_name} Adsets`,
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:warning: Something went wrong when starting work on the adsets for ${ad_account_name}! :warning:\n This is probably a bug, please let my maintainers know.`,
           "emoji": true,
         },
       },
@@ -1209,57 +1265,48 @@ export default SlackFunction(
   // Bulk Adsets Button Handler
   .addBlockActionsHandler(
     "button-bulk-fb-adsets",
-    async ({ body, client }) => {
+    async ({ inputs, body, client }) => {
+      // Prepare the lambda function payload
+      const payload = {
+        "channel_id": inputs.channel_id,
+        "ad_account_id": _ad_account_id,
+        "spreadsheet_id": _spreadsheet_id,
+        "fb_access_token": externalTokenFb,
+        "gs_access_token": externalTokenGs,
+      };
+
+      // Call the lambda function to create bulk adsets
+      const bulk_adsets_response = await fetch(
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adsets/bulk",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (bulk_adsets_response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${bulk_adsets_response.status})`;
+        console.log(error);
+        console.log(bulk_adsets_response);
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: bulk_adsets_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
+      }
+
       // Update the modal with a new view
       const response = await client.views.push({
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
-        view: {
-          "type": "modal",
-          "callback_id": "fbBulkAdsets-form",
-          "submit": {
-            "type": "plain_text",
-            "text": "Submit",
-            "emoji": true,
-          },
-          "close": {
-            "type": "plain_text",
-            "text": "Cancel",
-            "emoji": true,
-          },
-          "title": {
-            "type": "plain_text",
-            "text": "Facebook Adsets",
-            "emoji": true,
-          },
-          "blocks": [
-            {
-              "type": "section",
-              "text": {
-                "type": "plain_text",
-                "text":
-                  `Hi ${fb_name}! :wave:\n\nHere's the info I need before I can create those adsets for you.`,
-                "emoji": true,
-              },
-            },
-            {
-              "type": "divider",
-            },
-            {
-              "type": "input",
-              "block_id": "spreadsheet_url_input",
-              "element": {
-                "type": "url_text_input",
-                "action_id": "spreadsheet_url_input-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Spreadsheet URL",
-                "emoji": true,
-              },
-            },
-          ],
-        },
+        view: bulk_adsets_success_view(_ad_account_name),
       });
       if (response.error) {
         const error = `Failed to update a modal due to ${response.error}`;
