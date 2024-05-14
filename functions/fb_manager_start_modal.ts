@@ -507,12 +507,18 @@ const onboarding_loading_view = {
     "type": "plain_text",
     "text": "Ad Account Onboarding",
   },
+  "close": {
+    "type": "plain_text",
+    "text": "Close",
+    "emoji": true,
+  },
   "blocks": [
     {
       "type": "section",
       "text": {
         "type": "mrkdwn",
-        "text": "I am initialising the collab file, please wait...",
+        "text":
+          "I am initialising the collab file now. You can close this window and I will notify you when I am done.",
       },
     },
   ],
@@ -1388,7 +1394,7 @@ export default SlackFunction(
   // Add to Master Sheet Submission Handler
   .addViewSubmissionHandler(
     "addToMasterSheet-form",
-    async ({ inputs, client, body }) => {
+    async ({ inputs, body }) => {
       const spreadsheet_url = body.view.state
         .values["spreadsheet_url_input"]["spreadsheet_url_input-action"]
         .value;
@@ -1415,17 +1421,6 @@ export default SlackFunction(
 
       const spreadsheet_id = spreadsheet_url.split("/")[5];
       console.log("Spreadsheet ID: ", spreadsheet_id);
-
-      // Update the modal with a loading view
-      const response = await client.views.update({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: onboarding_loading_view,
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
 
       // Validate or Initialise the collab file
       const init_payload = {
@@ -1495,9 +1490,10 @@ export default SlackFunction(
         return { error };
       }
 
-      // Close the modal
+      // Show the loading view
       return {
-        completed: true,
+        response_action: "update",
+        view: onboarding_loading_view,
       };
     },
   )
