@@ -26,148 +26,158 @@ let _ad_account_id: string;
 let _ad_account_name: string;
 let _spreadsheet_id: string;
 
+// Function to truncate strings if they are longer than 24 chars
+function truncateTitle(title: string) {
+  if (title.length > 24) {
+    return title.substring(0, 20) + "...";
+  }
+  return title;
+}
+
 // views
-const main_menu_view = {
-  "type": "modal",
-  "callback_id": "fb-manager-menu",
-  "title": {
-    "type": "plain_text",
-    "text": "FB Marketing",
-  },
-  "blocks": [
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "Here's what I can help you with:",
-      },
+function main_menu_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fb-manager-menu",
+    "title": {
+      "type": "plain_text",
+      "text": truncateTitle(ad_account_name),
     },
-    {
-      "type": "divider",
-    },
-    {
-      "type": "section",
-      "block_id": "section-update-audiences",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Update* Saved Audiences",
-      },
-      "accessory": {
-        "type": "button",
+    "blocks": [
+      {
+        "type": "section",
         "text": {
-          "type": "plain_text",
-          "text": "Get Started",
+          "type": "mrkdwn",
+          "text": "Here's what I can help you with:",
         },
-        "action_id": "button-update-saved-audiences",
       },
-    },
-    {
-      "type": "section",
-      "block_id": "section-update-pull",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Update* Ad Campaign data",
+      {
+        "type": "divider",
       },
-      "accessory": {
-        "type": "button",
+      {
+        "type": "section",
+        "block_id": "section-update-audiences",
         "text": {
-          "type": "plain_text",
-          "text": "Get Started",
+          "type": "mrkdwn",
+          "text": "*Update* Saved Audiences",
         },
-        "action_id": "button-update-pull-fb-campaign",
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Get Started",
+          },
+          "action_id": "button-update-saved-audiences",
+        },
       },
-    },
-    {
-      "type": "divider",
-    },
-    {
-      "type": "section",
-      "block_id": "section-single-campaign",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Create Single* Facebook Ad Campaign",
-      },
-      "accessory": {
-        "type": "button",
+      {
+        "type": "section",
+        "block_id": "section-update-pull",
         "text": {
-          "type": "plain_text",
-          "text": "Get Started",
+          "type": "mrkdwn",
+          "text": "*Update* Ad Campaign data",
         },
-        "action_id": "button-single-fb-campaign",
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Get Started",
+          },
+          "action_id": "button-update-pull-fb-campaign",
+        },
       },
-    },
-    {
-      "type": "section",
-      "block_id": "section-bulk-campaigns",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Bulk Import* Facebook Ad Campaigns",
+      {
+        "type": "divider",
       },
-      "accessory": {
-        "type": "button",
+      {
+        "type": "section",
+        "block_id": "section-single-campaign",
         "text": {
-          "type": "plain_text",
-          "text": "Get Started",
+          "type": "mrkdwn",
+          "text": "*Create Single* Facebook Ad Campaign",
         },
-        "action_id": "button-bulk-fb-campaigns",
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Get Started",
+          },
+          "action_id": "button-single-fb-campaign",
+        },
       },
-    },
-    {
-      "type": "divider",
-    },
-    {
-      "type": "section",
-      "block_id": "section-single-adsets",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Create Single* Facebook Adset",
-      },
-      "accessory": {
-        "type": "button",
+      {
+        "type": "section",
+        "block_id": "section-bulk-campaigns",
         "text": {
-          "type": "plain_text",
-          "text": "Not working yet!",
+          "type": "mrkdwn",
+          "text": "*Bulk Import* Facebook Ad Campaigns",
         },
-        "action_id": "button-single-fb-adsets",
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Get Started",
+          },
+          "action_id": "button-bulk-fb-campaigns",
+        },
       },
-    },
-    {
-      "type": "section",
-      "block_id": "section-bulk-adsets",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Bulk Import* Facebook Adsets",
+      {
+        "type": "divider",
       },
-      "accessory": {
-        "type": "button",
+      {
+        "type": "section",
+        "block_id": "section-single-adsets",
         "text": {
-          "type": "plain_text",
-          "text": "Get Started",
+          "type": "mrkdwn",
+          "text": "*Create Single* Facebook Adset",
         },
-        "action_id": "button-bulk-fb-adsets",
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Not working yet!",
+          },
+          "action_id": "button-single-fb-adsets",
+        },
       },
-    },
-    {
-      "type": "divider",
-    },
-    {
-      "type": "section",
-      "block_id": "section-targeting-spec",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Manage* Targeting Specs",
-      },
-      "accessory": {
-        "type": "button",
+      {
+        "type": "section",
+        "block_id": "section-bulk-adsets",
         "text": {
-          "type": "plain_text",
-          "text": "Not working yet",
+          "type": "mrkdwn",
+          "text": "*Bulk Import* Facebook Adsets",
         },
-        "action_id": "button-targeting-specs",
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Get Started",
+          },
+          "action_id": "button-bulk-fb-adsets",
+        },
       },
-    },
-  ],
-};
+      {
+        "type": "divider",
+      },
+      {
+        "type": "section",
+        "block_id": "section-targeting-spec",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*Manage* Targeting Specs",
+        },
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Not working yet",
+          },
+          "action_id": "button-targeting-specs",
+        },
+      },
+    ],
+  };
+}
 
 const add_to_master_sheet_view = {
   "type": "modal",
@@ -331,7 +341,7 @@ function bulk_campaigns_success_view(ad_account_name: string) {
     },
     "title": {
       "type": "plain_text",
-      "text": `${ad_account_name} Campaigns`,
+      "text": truncateTitle(ad_account_name + "Campaigns"),
       "emoji": true,
     },
     "blocks": [
@@ -359,7 +369,7 @@ function bulk_campaigns_failed_view(ad_account_name: string) {
     },
     "title": {
       "type": "plain_text",
-      "text": `${ad_account_name} Campaigns`,
+      "text": truncateTitle(ad_account_name + "Campaigns"),
       "emoji": true,
     },
     "blocks": [
@@ -387,7 +397,7 @@ function bulk_adsets_success_view(ad_account_name: string) {
     },
     "title": {
       "type": "plain_text",
-      "text": `${ad_account_name} Adsets`,
+      "text": truncateTitle(ad_account_name + "Adsets"),
       "emoji": true,
     },
     "blocks": [
@@ -415,7 +425,7 @@ function bulk_adsets_failed_view(ad_account_name: string) {
     },
     "title": {
       "type": "plain_text",
-      "text": `${ad_account_name} Adsets`,
+      "text": truncateTitle(ad_account_name + "Adsets"),
       "emoji": true,
     },
     "blocks": [
