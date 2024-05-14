@@ -775,7 +775,7 @@ export default SlackFunction(
       // Open the main menu
       return {
         response_action: "update",
-        view: main_menu_view,
+        view: main_menu_view(_ad_account_name),
       };
     },
   )
@@ -1421,7 +1421,7 @@ export default SlackFunction(
       // Open the main menu
       return {
         response_action: "update",
-        view: main_menu_view,
+        view: main_menu_view(_ad_account_name),
       };
     },
   )
