@@ -15,6 +15,8 @@ interface formErrors {
   [key: string]: string;
 }
 
+const INIT_ENDPOINT =
+  "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/ad-accounts/init";
 const GOOGLE_SHEETS_ROOT_URL = "https://sheets.googleapis.com/v4/spreadsheets/";
 const MASTER_SHEET_ID = "1am9nNSWcUYpbvHFA8nk0GAvzedYvyBGTqNNT9YAX0wM";
 
@@ -497,6 +499,61 @@ function update_saved_audiences_failed_view(ad_account_name: string) {
     ],
   };
 }
+
+const onboarding_loading_view = {
+  "type": "modal",
+  "callback_id": "onboarding-loading",
+  "title": {
+    "type": "plain_text",
+    "text": "Ad Account Onboarding",
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "I am initialising the collab file, please wait...",
+      },
+    },
+  ],
+};
+
+const onboarding_success_view = {
+  "type": "modal",
+  "callback_id": "onboarding-success",
+  "title": {
+    "type": "plain_text",
+    "text": "Ad Account Onboarding",
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "The collab file has been initialised successfully!",
+      },
+    },
+  ],
+};
+
+const onboarding_failed_view = {
+  "type": "modal",
+  "callback_id": "onboarding-failed",
+  "title": {
+    "type": "plain_text",
+    "text": "Ad Account Onboarding",
+  },
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text":
+          "The collab file failed to initialise! Please contact the app maintainers.",
+      },
+    },
+  ],
+};
 
 // Function Definition
 export const FbManagerStartModalFunction = DefineFunction({
@@ -1349,7 +1406,7 @@ export default SlackFunction(
   // Add to Master Sheet Submission Handler
   .addViewSubmissionHandler(
     "addToMasterSheet-form",
-    async ({ body }) => {
+    async ({ client, body }) => {
       const spreadsheet_url = body.view.state
         .values["spreadsheet_url_input"]["spreadsheet_url_input-action"]
         .value;
@@ -1377,6 +1434,44 @@ export default SlackFunction(
       const spreadsheet_id = spreadsheet_url.split("/")[5];
       console.log("Spreadsheet ID: ", spreadsheet_id);
 
+      // Update the modal with a loading view
+      const response = await client.views.update({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: onboarding_loading_view,
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+
+      // Validate or Initialise the collab file
+      const init_payload = {
+        "spreadsheet_id": spreadsheet_id,
+        "gs_access_token": externalTokenGs,
+        "channel_id": body.user.id,
+      };
+      const init_response = await fetch(
+        INIT_ENDPOINT,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(init_payload),
+        },
+      );
+      if (init_response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${init_response.status})`;
+        console.log(error);
+        console.log(init_response);
+        return {
+          response_action: "update",
+          view: onboarding_failed_view,
+        };
+      }
+
       // Add spreadsheet id to master sheet
       const gs_append_endpoint = GOOGLE_SHEETS_ROOT_URL + MASTER_SHEET_ID +
         "/values/'spreadsheet-master-list'!A3:append?access_token=" +
@@ -1389,6 +1484,7 @@ export default SlackFunction(
           _ad_account_name,
           _ad_account_id,
           spreadsheet_id,
+          Date.now().toLocaleString(),
         ]],
       };
       const gs_append_response = await fetch(
@@ -1418,10 +1514,10 @@ export default SlackFunction(
       console.log("Ad Account ID: ", _ad_account_id);
       console.log("Spreadsheet ID: ", _spreadsheet_id);
 
-      // Open the main menu
+      // Show the success view
       return {
         response_action: "update",
-        view: main_menu_view(_ad_account_name),
+        view: onboarding_success_view,
       };
     },
   )
@@ -1695,5 +1791,16 @@ export default SlackFunction(
         function_execution_id: body.function_execution_id,
         outputs: {},
       });
+    },
+  )
+  // Init Success Closed Handler
+  .addViewClosedHandler(
+    "onboarding-success",
+    ({ view }) => {
+      console.log("View was closed: ", view);
+      return {
+        response_action: "update",
+        view: main_menu_view(_ad_account_name),
+      };
     },
   );
