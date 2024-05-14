@@ -1432,6 +1432,8 @@ export default SlackFunction(
         "spreadsheet_id": spreadsheet_id,
         "gs_access_token": externalTokenGs,
         "channel_id": inputs.channel_id,
+        "ad_account_id": _ad_account_id,
+        "fb_access_token": externalTokenFb,
       };
       const init_response = await fetch(
         INIT_ENDPOINT,
@@ -1493,17 +1495,9 @@ export default SlackFunction(
         return { error };
       }
 
-      _spreadsheet_id = spreadsheet_id;
-
-      // TEST: Check the three main global values
-      console.log("Ad Account Name: ", _ad_account_name);
-      console.log("Ad Account ID: ", _ad_account_id);
-      console.log("Spreadsheet ID: ", _spreadsheet_id);
-
-      // Show the main menu
+      // Close the modal
       return {
-        response_action: "update",
-        view: main_menu_view(_ad_account_name),
+        completed: true,
       };
     },
   )
