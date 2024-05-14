@@ -518,24 +518,6 @@ const onboarding_loading_view = {
   ],
 };
 
-const onboarding_success_view = {
-  "type": "modal",
-  "callback_id": "onboarding-success",
-  "title": {
-    "type": "plain_text",
-    "text": "Ad Account Onboarding",
-  },
-  "blocks": [
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "The collab file has been initialised successfully!",
-      },
-    },
-  ],
-};
-
 const onboarding_failed_view = {
   "type": "modal",
   "callback_id": "onboarding-failed",
@@ -1406,7 +1388,7 @@ export default SlackFunction(
   // Add to Master Sheet Submission Handler
   .addViewSubmissionHandler(
     "addToMasterSheet-form",
-    async ({ client, body }) => {
+    async ({ inputs, client, body }) => {
       const spreadsheet_url = body.view.state
         .values["spreadsheet_url_input"]["spreadsheet_url_input-action"]
         .value;
@@ -1449,7 +1431,7 @@ export default SlackFunction(
       const init_payload = {
         "spreadsheet_id": spreadsheet_id,
         "gs_access_token": externalTokenGs,
-        "channel_id": body.user.id,
+        "channel_id": inputs.channel_id,
       };
       const init_response = await fetch(
         INIT_ENDPOINT,
@@ -1477,6 +1459,10 @@ export default SlackFunction(
         "/values/'spreadsheet-master-list'!A3:append?access_token=" +
         externalTokenGs + "&valueInputOption=USER_ENTERED";
       console.log("gs_append_endpoint: ", gs_append_endpoint);
+      const datetime_now = new Date().toLocaleString(
+        "en-GB",
+        { timeZone: "Asia/Bangkok" },
+      );
       const gs_append_body = {
         "range": "'spreadsheet-master-list'!A3",
         "majorDimension": "ROWS",
@@ -1484,7 +1470,7 @@ export default SlackFunction(
           _ad_account_name,
           _ad_account_id,
           spreadsheet_id,
-          Date.now().toLocaleString(),
+          datetime_now,
         ]],
       };
       const gs_append_response = await fetch(
@@ -1514,10 +1500,10 @@ export default SlackFunction(
       console.log("Ad Account ID: ", _ad_account_id);
       console.log("Spreadsheet ID: ", _spreadsheet_id);
 
-      // Show the success view
+      // Show the main menu
       return {
         response_action: "update",
-        view: onboarding_success_view,
+        view: main_menu_view(_ad_account_name),
       };
     },
   )
@@ -1780,27 +1766,5 @@ export default SlackFunction(
       }
 
       return;
-    },
-  )
-  // Ad Campaigns Closed Handler
-  .addViewClosedHandler(
-    ["fbBulkCampaign-form", "fbBulkAdsets-form"],
-    async ({ view, client, body }) => {
-      console.log("View was closed: ", view);
-      return await client.functions.completeSuccess({
-        function_execution_id: body.function_execution_id,
-        outputs: {},
-      });
-    },
-  )
-  // Init Success Closed Handler
-  .addViewClosedHandler(
-    "onboarding-success",
-    ({ view }) => {
-      console.log("View was closed: ", view);
-      return {
-        response_action: "update",
-        view: main_menu_view(_ad_account_name),
-      };
     },
   );
