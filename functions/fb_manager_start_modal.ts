@@ -341,7 +341,7 @@ function bulk_campaigns_success_view(ad_account_name: string) {
     },
     "title": {
       "type": "plain_text",
-      "text": truncateTitle(ad_account_name + "Campaigns"),
+      "text": truncateTitle(ad_account_name + " Campaigns"),
       "emoji": true,
     },
     "blocks": [
@@ -369,7 +369,7 @@ function bulk_campaigns_failed_view(ad_account_name: string) {
     },
     "title": {
       "type": "plain_text",
-      "text": truncateTitle(ad_account_name + "Campaigns"),
+      "text": truncateTitle(ad_account_name + " Campaigns"),
       "emoji": true,
     },
     "blocks": [
@@ -397,7 +397,7 @@ function bulk_adsets_success_view(ad_account_name: string) {
     },
     "title": {
       "type": "plain_text",
-      "text": truncateTitle(ad_account_name + "Adsets"),
+      "text": truncateTitle(ad_account_name + " Adsets"),
       "emoji": true,
     },
     "blocks": [
@@ -425,7 +425,7 @@ function bulk_adsets_failed_view(ad_account_name: string) {
     },
     "title": {
       "type": "plain_text",
-      "text": truncateTitle(ad_account_name + "Adsets"),
+      "text": truncateTitle(ad_account_name + " Adsets"),
       "emoji": true,
     },
     "blocks": [
@@ -453,7 +453,7 @@ function update_saved_audiences_success_view(ad_account_name: string) {
     },
     "title": {
       "type": "plain_text",
-      "text": "Facebook Saved Audiences",
+      "text": truncateTitle(ad_account_name + " Saved Audiences"),
       "emoji": true,
     },
     "blocks": [
@@ -481,7 +481,7 @@ function update_saved_audiences_failed_view(ad_account_name: string) {
     },
     "title": {
       "type": "plain_text",
-      "text": "Facebook Saved Audiences",
+      "text": truncateTitle(ad_account_name + " Saved Audiences"),
       "emoji": true,
     },
     "blocks": [
