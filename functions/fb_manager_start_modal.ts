@@ -58,6 +58,22 @@ function main_menu_view(ad_account_name: string) {
       },
       {
         "type": "section",
+        "block_id": "section-reinit",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*Reinitialise* the Ad Account",
+        },
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Start",
+          },
+          "action_id": "button-reinit",
+        },
+      },
+      {
+        "type": "section",
         "block_id": "section-update-audiences",
         "text": {
           "type": "mrkdwn",
@@ -67,45 +83,13 @@ function main_menu_view(ad_account_name: string) {
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Get Started",
+            "text": "Start",
           },
           "action_id": "button-update-saved-audiences",
         },
       },
       {
-        "type": "section",
-        "block_id": "section-update-pull",
-        "text": {
-          "type": "mrkdwn",
-          "text": "*Update* Ad Campaign data",
-        },
-        "accessory": {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Get Started",
-          },
-          "action_id": "button-update-pull-fb-campaign",
-        },
-      },
-      {
         "type": "divider",
-      },
-      {
-        "type": "section",
-        "block_id": "section-single-campaign",
-        "text": {
-          "type": "mrkdwn",
-          "text": "*Create Single* Facebook Ad Campaign",
-        },
-        "accessory": {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Get Started",
-          },
-          "action_id": "button-single-fb-campaign",
-        },
       },
       {
         "type": "section",
@@ -118,28 +102,9 @@ function main_menu_view(ad_account_name: string) {
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Get Started",
+            "text": "Start",
           },
           "action_id": "button-bulk-fb-campaigns",
-        },
-      },
-      {
-        "type": "divider",
-      },
-      {
-        "type": "section",
-        "block_id": "section-single-adsets",
-        "text": {
-          "type": "mrkdwn",
-          "text": "*Create Single* Facebook Adset",
-        },
-        "accessory": {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Not working yet!",
-          },
-          "action_id": "button-single-fb-adsets",
         },
       },
       {
@@ -153,29 +118,29 @@ function main_menu_view(ad_account_name: string) {
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Get Started",
+            "text": "Start",
           },
           "action_id": "button-bulk-fb-adsets",
         },
       },
       {
-        "type": "divider",
-      },
-      {
         "type": "section",
-        "block_id": "section-targeting-spec",
+        "block_id": "section-bulk-adcopies",
         "text": {
           "type": "mrkdwn",
-          "text": "*Manage* Targeting Specs",
+          "text": "*Bulk Import* Facebook Adcopies",
         },
         "accessory": {
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Not working yet",
+            "text": "Start",
           },
-          "action_id": "button-targeting-specs",
+          "action_id": "button-bulk-fb-adcopies",
         },
+      },
+      {
+        "type": "divider",
       },
     ],
   };
