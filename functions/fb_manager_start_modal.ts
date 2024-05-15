@@ -792,7 +792,7 @@ export default SlackFunction(
   // Reinitialise Button Handler
   .addBlockActionsHandler(
     "button-reinit",
-    async ({ inputs }) => {
+    async ({ inputs, client }) => {
       const init_payload = {
         "spreadsheet_id": _spreadsheet_id,
         "gs_access_token": externalTokenGs,
@@ -823,9 +823,19 @@ export default SlackFunction(
       }
 
       // Show the loading view
-      return {
-        response_action: "update",
+      const response = await client.views.open({
+        interactivity_pointer: inputs.interactivity.interactivity_pointer,
         view: onboarding_loading_view,
+      });
+      // Handle the error if the modal was not opened successfully
+      if (response.error) {
+        const error =
+          `Failed to open a modal in the demo workflow. Contact the app maintainers with the following information - (error: ${response.error})`;
+        return { error };
+      }
+
+      return {
+        completed: false,
       };
     },
   )
