@@ -789,6 +789,46 @@ export default SlackFunction(
       };
     },
   )
+  // Reinitialise Button Handler
+  .addBlockActionsHandler(
+    "button-reinit",
+    async ({ inputs }) => {
+      const init_payload = {
+        "spreadsheet_id": _spreadsheet_id,
+        "gs_access_token": externalTokenGs,
+        "channel_id": inputs.channel_id,
+        "ad_account_id": _ad_account_id,
+        "ad_account_name": _ad_account_name,
+        "fb_access_token": externalTokenFb,
+      };
+      const init_response = await fetch(
+        INIT_ENDPOINT,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(init_payload),
+        },
+      );
+      if (init_response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${init_response.status})`;
+        console.log(error);
+        console.log(init_response);
+        return {
+          response_action: "update",
+          view: onboarding_failed_view,
+        };
+      }
+
+      // Show the loading view
+      return {
+        response_action: "update",
+        view: onboarding_loading_view,
+      };
+    },
+  )
   // Update Saved Audiences Button Handler
   .addBlockActionsHandler(
     "button-update-saved-audiences",
