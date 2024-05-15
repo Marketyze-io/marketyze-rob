@@ -193,110 +193,6 @@ const add_to_master_sheet_view = {
   ],
 };
 
-const targeting_specs_menu_view = {
-  "type": "modal",
-  "callback_id": "targeting-specs-menu",
-  "title": {
-    "type": "plain_text",
-    "text": "FB Targeting Specs",
-  },
-  "blocks": [
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "Here's what I can help you with:",
-      },
-    },
-    {
-      "type": "divider",
-    },
-    {
-      "type": "section",
-      "block_id": "section-create-targeting-spec",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Create* Targeting Spec",
-      },
-      "accessory": {
-        "type": "button",
-        "text": {
-          "type": "plain_text",
-          "text": "Get Started",
-        },
-        "action_id": "button-create-targeting-spec",
-      },
-    },
-    {
-      "type": "section",
-      "block_id": "section-duplicate-targeting-spec",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Duplicate* Targeting Spec",
-      },
-      "accessory": {
-        "type": "button",
-        "text": {
-          "type": "plain_text",
-          "text": "Get Started",
-        },
-        "action_id": "button-duplicate-targeting-spec",
-      },
-    },
-    {
-      "type": "section",
-      "block_id": "section-import-targeting-spec",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Import* Targeting Spec",
-      },
-      "accessory": {
-        "type": "button",
-        "text": {
-          "type": "plain_text",
-          "text": "Get Started",
-        },
-        "action_id": "button-import-targeting-spec",
-      },
-    },
-    {
-      "type": "divider",
-    },
-    {
-      "type": "section",
-      "block_id": "section-update-targeting-spec",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Update* Targeting Spec",
-      },
-      "accessory": {
-        "type": "button",
-        "text": {
-          "type": "plain_text",
-          "text": "Get Started",
-        },
-        "action_id": "button-update-targeting-spec",
-      },
-    },
-    {
-      "type": "section",
-      "block_id": "section-json-targeting-spec",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Create* Targeting Spec from JSON",
-      },
-      "accessory": {
-        "type": "button",
-        "text": {
-          "type": "plain_text",
-          "text": "Get Started",
-        },
-        "action_id": "button-json-targeting-spec",
-      },
-    },
-  ],
-};
-
 function bulk_campaigns_success_view(ad_account_name: string) {
   return {
     "type": "modal",
@@ -695,6 +591,221 @@ export default SlackFunction(
     };
   },
 )
+  // Reinitialise Button Handler
+  .addBlockActionsHandler(
+    "button-reinit",
+    async ({ inputs, client }) => {
+      const init_payload = {
+        "spreadsheet_id": _spreadsheet_id,
+        "gs_access_token": externalTokenGs,
+        "channel_id": inputs.channel_id,
+        "ad_account_id": _ad_account_id,
+        "ad_account_name": _ad_account_name,
+        "fb_access_token": externalTokenFb,
+      };
+      const init_response = await fetch(
+        INIT_ENDPOINT,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(init_payload),
+        },
+      );
+      if (init_response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${init_response.status})`;
+        console.log(error);
+        console.log(init_response);
+        return {
+          response_action: "update",
+          view: onboarding_failed_view,
+        };
+      }
+
+      // Show the loading view
+      const response = await client.views.update({
+        interactivity_pointer: inputs.interactivity.interactivity_pointer,
+        view: onboarding_loading_view,
+      });
+      // Handle the error if the modal was not opened successfully
+      if (response.error) {
+        const error =
+          `Failed to open a modal in the demo workflow. Contact the app maintainers with the following information - (error: ${response.error})`;
+        return { error };
+      }
+
+      return {
+        completed: false,
+      };
+    },
+  )
+  // Update Saved Audiences Button Handler
+  .addBlockActionsHandler(
+    "button-update-saved-audiences",
+    async ({ client, body }) => {
+      // Call the lambda function to update saved audiences
+      const update_saved_audiences_endpoint =
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/audiences/update";
+      const update_saved_audiences_response = await fetch(
+        update_saved_audiences_endpoint,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fb_access_token: externalTokenFb,
+            ad_account_id: _ad_account_id,
+            gs_access_token: externalTokenGs,
+            spreadsheet_id: _spreadsheet_id,
+          }),
+        },
+      );
+
+      // Handle the error if the lambda function was not called successfully
+      if (update_saved_audiences_response.status != 200) {
+        const response_text = await update_saved_audiences_response.text();
+        const _error =
+          `Failed to call lambda function! (status: ${update_saved_audiences_response.status}, body: ${response_text})`;
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: update_saved_audiences_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
+      }
+
+      // Update the modal with a new view
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: update_saved_audiences_success_view(_ad_account_name),
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
+      };
+    },
+  )
+  // Bulk Campaigns Button Handler
+  .addBlockActionsHandler(
+    "button-bulk-fb-campaigns",
+    async ({ inputs, body, client }) => {
+      // Prepare the lambda function payload
+      const payload = {
+        "channel_id": inputs.channel_id,
+        "ad_account_id": _ad_account_id,
+        "spreadsheet_id": _spreadsheet_id,
+        "fb_access_token": externalTokenFb,
+        "gs_access_token": externalTokenGs,
+      };
+
+      // Call the lambda function to create bulk campaigns
+      const bulk_campaigns_response = await fetch(
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/bulk",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (bulk_campaigns_response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${bulk_campaigns_response.status})`;
+        console.log(error);
+        console.log(bulk_campaigns_response);
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: bulk_campaigns_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
+      }
+
+      // Update the modal with a new view
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: bulk_campaigns_success_view(_ad_account_name),
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
+      };
+    },
+  )
+  // Bulk Adsets Button Handler
+  .addBlockActionsHandler(
+    "button-bulk-fb-adsets",
+    async ({ inputs, body, client }) => {
+      // Prepare the lambda function payload
+      const payload = {
+        "channel_id": inputs.channel_id,
+        "ad_account_id": _ad_account_id,
+        "spreadsheet_id": _spreadsheet_id,
+        "fb_access_token": externalTokenFb,
+        "gs_access_token": externalTokenGs,
+      };
+
+      // Call the lambda function to create bulk adsets
+      const bulk_adsets_response = await fetch(
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adsets/bulk",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (bulk_adsets_response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${bulk_adsets_response.status})`;
+        console.log(error);
+        console.log(bulk_adsets_response);
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: bulk_adsets_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
+      }
+
+      // Update the modal with a new view
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: bulk_adsets_success_view(_ad_account_name),
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
+      };
+    },
+  )
+  // Bulk Adcopies Button Handler (TODO: Implement this)
   // Ad Account Submission handler
   .addViewSubmissionHandler(
     "fb-ad-account-form",
@@ -789,623 +900,6 @@ export default SlackFunction(
       };
     },
   )
-  // Reinitialise Button Handler
-  .addBlockActionsHandler(
-    "button-reinit",
-    async ({ inputs, client }) => {
-      const init_payload = {
-        "spreadsheet_id": _spreadsheet_id,
-        "gs_access_token": externalTokenGs,
-        "channel_id": inputs.channel_id,
-        "ad_account_id": _ad_account_id,
-        "ad_account_name": _ad_account_name,
-        "fb_access_token": externalTokenFb,
-      };
-      const init_response = await fetch(
-        INIT_ENDPOINT,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(init_payload),
-        },
-      );
-      if (init_response.status != 200) {
-        const error =
-          `Failed to call the API endpoint! (status: ${init_response.status})`;
-        console.log(error);
-        console.log(init_response);
-        return {
-          response_action: "update",
-          view: onboarding_failed_view,
-        };
-      }
-
-      // Show the loading view
-      const response = await client.views.open({
-        interactivity_pointer: inputs.interactivity.interactivity_pointer,
-        view: onboarding_loading_view,
-      });
-      // Handle the error if the modal was not opened successfully
-      if (response.error) {
-        const error =
-          `Failed to open a modal in the demo workflow. Contact the app maintainers with the following information - (error: ${response.error})`;
-        return { error };
-      }
-
-      return {
-        completed: false,
-      };
-    },
-  )
-  // Update Saved Audiences Button Handler
-  .addBlockActionsHandler(
-    "button-update-saved-audiences",
-    async ({ client, body }) => {
-      // Call the lambda function to update saved audiences
-      const update_saved_audiences_endpoint =
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/audiences/update";
-      const update_saved_audiences_response = await fetch(
-        update_saved_audiences_endpoint,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            fb_access_token: externalTokenFb,
-            ad_account_id: _ad_account_id,
-            gs_access_token: externalTokenGs,
-            spreadsheet_id: _spreadsheet_id,
-          }),
-        },
-      );
-
-      // Handle the error if the lambda function was not called successfully
-      if (update_saved_audiences_response.status != 200) {
-        const response_text = await update_saved_audiences_response.text();
-        const _error =
-          `Failed to call lambda function! (status: ${update_saved_audiences_response.status}, body: ${response_text})`;
-        const response = await client.views.push({
-          interactivity_pointer: body.interactivity.interactivity_pointer,
-          view_id: body.view.id,
-          view: update_saved_audiences_failed_view(_ad_account_name),
-        });
-        if (response.error) {
-          const error = `Failed to update a modal due to ${response.error}`;
-          return { error };
-        }
-      }
-
-      // Update the modal with a new view
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: update_saved_audiences_success_view(_ad_account_name),
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
-      return {
-        completed: false,
-      };
-    },
-  )
-  // Update Campaigns Button Handler
-  .addBlockActionsHandler(
-    "button-update-pull-fb-campaign",
-    async ({ body, client }) => {
-      // Update the modal with a new view
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: {
-          "type": "modal",
-          "callback_id": "fbCampaign-updatePull-form",
-          "submit": {
-            "type": "plain_text",
-            "text": "Submit",
-            "emoji": true,
-          },
-          "close": {
-            "type": "plain_text",
-            "text": "Cancel",
-            "emoji": true,
-          },
-          "title": {
-            "type": "plain_text",
-            "text": "Facebook Campaigns",
-            "emoji": true,
-          },
-          "blocks": [
-            {
-              "type": "section",
-              "text": {
-                "type": "plain_text",
-                "text":
-                  `Hi ${fb_name}! :wave:\n\nPick a spreadsheet to update.`,
-                "emoji": true,
-              },
-            },
-            {
-              "type": "divider",
-            },
-            {
-              "type": "input",
-              "block_id": "spreadsheet_url_input",
-              "element": {
-                "type": "url_text_input",
-                "action_id": "spreadsheet_url_input-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Spreadsheet URL",
-                "emoji": true,
-              },
-            },
-          ],
-        },
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
-      return {
-        completed: false,
-      };
-    },
-  )
-  // Create Campaign Button Handler
-  .addBlockActionsHandler(
-    "button-single-fb-campaign",
-    async ({ body, client }) => {
-      // Update the modal with a new view
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: {
-          "type": "modal",
-          "callback_id": "fbSingleCampaign-form",
-          "submit": {
-            "type": "plain_text",
-            "text": "Submit",
-            "emoji": true,
-          },
-          "close": {
-            "type": "plain_text",
-            "text": "Cancel",
-            "emoji": true,
-          },
-          "title": {
-            "type": "plain_text",
-            "text": "Facebook Campaigns",
-            "emoji": true,
-          },
-          "blocks": [
-            {
-              "type": "section",
-              "text": {
-                "type": "plain_text",
-                "text":
-                  `Hi ${fb_name}! :wave:\n\nHere's the info I need before I can create that campaign for you.`,
-                "emoji": true,
-              },
-            },
-            {
-              "type": "divider",
-            },
-            {
-              "type": "input",
-              "block_id": "campaign_name_input",
-              "element": {
-                "type": "plain_text_input",
-                "action_id": "campaign_name_input-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Campaign Name",
-                "emoji": true,
-              },
-            },
-            {
-              "type": "input",
-              "block_id": "objective_dropdown",
-              "element": {
-                "type": "static_select",
-                "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select an item",
-                  "emoji": true,
-                },
-                "options": [
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Awareness",
-                      "emoji": true,
-                    },
-                    "value": "OUTCOME_AWARENESS",
-                  },
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Traffic",
-                      "emoji": true,
-                    },
-                    "value": "OUTCOME_TRAFFIC",
-                  },
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Engagement",
-                      "emoji": true,
-                    },
-                    "value": "OUTCOME_ENGAGEMENT",
-                  },
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Leads",
-                      "emoji": true,
-                    },
-                    "value": "OUTCOME_LEADS",
-                  },
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "App Promotion",
-                      "emoji": true,
-                    },
-                    "value": "OUTCOME_APP_PROMOTION",
-                  },
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Sales",
-                      "emoji": true,
-                    },
-                    "value": "OUTCOME_SALES",
-                  },
-                ],
-                "action_id": "objective_dropdown-select-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Campaign Objective",
-                "emoji": true,
-              },
-            },
-            {
-              "type": "input",
-              "block_id": "status_dropdown",
-              "element": {
-                "type": "static_select",
-                "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select an item",
-                  "emoji": true,
-                },
-                "options": [
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Paused",
-                      "emoji": true,
-                    },
-                    "value": "PAUSED",
-                  },
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Running",
-                      "emoji": true,
-                    },
-                    "value": "RUNNING",
-                  },
-                ],
-                "action_id": "status_dropdown-select-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Campaign Status",
-                "emoji": true,
-              },
-            },
-            {
-              "type": "input",
-              "block_id": "buying_type_dropdown",
-              "element": {
-                "type": "static_select",
-                "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select an item",
-                  "emoji": true,
-                },
-                "options": [
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Auction",
-                      "emoji": true,
-                    },
-                    "value": "AUCTION",
-                  },
-                ],
-                "action_id": "buying_dropdown-select-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Buying Type",
-                "emoji": true,
-              },
-            },
-            {
-              "type": "input",
-              "block_id": "special_ad_categories_input",
-              "optional": true,
-              "element": {
-                "type": "multi_static_select",
-                "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select options",
-                  "emoji": true,
-                },
-                "options": [
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Credit",
-                      "emoji": true,
-                    },
-                    "value": "CREDIT",
-                  },
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Employment",
-                      "emoji": true,
-                    },
-                    "value": "EMPLOYMENT",
-                  },
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Housing",
-                      "emoji": true,
-                    },
-                    "value": "HOUSING",
-                  },
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Politics",
-                      "emoji": true,
-                    },
-                    "value": "ISSUES_ELECTIONS_POLITICS",
-                  },
-                  {
-                    "text": {
-                      "type": "plain_text",
-                      "text": "Online Gambling",
-                      "emoji": true,
-                    },
-                    "value": "ONLINE_GAMBLING_AND_GAMING",
-                  },
-                ],
-                "action_id": "multi_static_select-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Special Ad Categories",
-                "emoji": true,
-              },
-            },
-          ],
-        },
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
-      return {
-        completed: false,
-      };
-    },
-  )
-  // Bulk Campaigns Button Handler
-  .addBlockActionsHandler(
-    "button-bulk-fb-campaigns",
-    async ({ inputs, body, client }) => {
-      // Prepare the lambda function payload
-      const payload = {
-        "channel_id": inputs.channel_id,
-        "ad_account_id": _ad_account_id,
-        "spreadsheet_id": _spreadsheet_id,
-        "fb_access_token": externalTokenFb,
-        "gs_access_token": externalTokenGs,
-      };
-
-      // Call the lambda function to create bulk campaigns
-      const bulk_campaigns_response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/bulk",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-      if (bulk_campaigns_response.status != 200) {
-        const error =
-          `Failed to call the API endpoint! (status: ${bulk_campaigns_response.status})`;
-        console.log(error);
-        console.log(bulk_campaigns_response);
-        const response = await client.views.push({
-          interactivity_pointer: body.interactivity.interactivity_pointer,
-          view_id: body.view.id,
-          view: bulk_campaigns_failed_view(_ad_account_name),
-        });
-        if (response.error) {
-          const error = `Failed to update a modal due to ${response.error}`;
-          return { error };
-        }
-      }
-
-      // Update the modal with a new view
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: bulk_campaigns_success_view(_ad_account_name),
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
-      return {
-        completed: false,
-      };
-    },
-  )
-  // Adset Button Handler (TODO)
-  .addBlockActionsHandler(
-    "button-single-fb-adsets",
-    async ({ body, client }) => {
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: {
-          "type": "modal",
-          "callback_id": "fbSingleAdsets-form",
-          "submit": {
-            "type": "plain_text",
-            "text": "Submit",
-            "emoji": true,
-          },
-          "close": {
-            "type": "plain_text",
-            "text": "Cancel",
-            "emoji": true,
-          },
-          "title": {
-            "type": "plain_text",
-            "text": "Facebook Adsets",
-            "emoji": true,
-          },
-          "blocks": [
-            {
-              "type": "section",
-              "text": {
-                "type": "plain_text",
-                "text":
-                  ":wave: Hey David!\n\nHere's the info I need before I can create those adsets for you.",
-                "emoji": true,
-              },
-            },
-            {
-              "type": "divider",
-            },
-            {
-              "type": "input",
-              "block_id": "spreadsheet_url_input",
-              "element": {
-                "type": "url_text_input",
-                "action_id": "spreadsheet_url_input-action",
-              },
-              "label": {
-                "type": "plain_text",
-                "text": "Spreadsheet URL",
-                "emoji": true,
-              },
-            },
-          ],
-        },
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
-      return {
-        completed: true,
-      };
-    },
-  )
-  // Bulk Adsets Button Handler
-  .addBlockActionsHandler(
-    "button-bulk-fb-adsets",
-    async ({ inputs, body, client }) => {
-      // Prepare the lambda function payload
-      const payload = {
-        "channel_id": inputs.channel_id,
-        "ad_account_id": _ad_account_id,
-        "spreadsheet_id": _spreadsheet_id,
-        "fb_access_token": externalTokenFb,
-        "gs_access_token": externalTokenGs,
-      };
-
-      // Call the lambda function to create bulk adsets
-      const bulk_adsets_response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adsets/bulk",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-      if (bulk_adsets_response.status != 200) {
-        const error =
-          `Failed to call the API endpoint! (status: ${bulk_adsets_response.status})`;
-        console.log(error);
-        console.log(bulk_adsets_response);
-        const response = await client.views.push({
-          interactivity_pointer: body.interactivity.interactivity_pointer,
-          view_id: body.view.id,
-          view: bulk_adsets_failed_view(_ad_account_name),
-        });
-        if (response.error) {
-          const error = `Failed to update a modal due to ${response.error}`;
-          return { error };
-        }
-      }
-
-      // Update the modal with a new view
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: bulk_adsets_success_view(_ad_account_name),
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
-      return {
-        completed: false,
-      };
-    },
-  )
-  // Targeting Specs Button Handler
-  .addBlockActionsHandler(
-    "button-targeting-specs",
-    async ({ body, client }) => {
-      // Update the modal with a new view
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: targeting_specs_menu_view,
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
-      return {
-        completed: false,
-      };
-    },
-  )
   // Add to Master Sheet Submission Handler
   .addViewSubmissionHandler(
     "addToMasterSheet-form",
@@ -1472,266 +966,5 @@ export default SlackFunction(
         response_action: "update",
         view: onboarding_loading_view,
       };
-    },
-  )
-  // Campaigns Update Submission Handler
-  .addViewSubmissionHandler(
-    "fbCampaign-updatePull-form",
-    async ({ inputs, body, client }) => {
-      const ad_account_name = _ad_account_name;
-      const ad_account_id = _ad_account_id;
-      const spreadsheet_url = body.view.state
-        .values["spreadsheet_url_input"]["spreadsheet_url_input-action"].value;
-
-      // Form validation
-      const errors: formErrors = {};
-      const isValidUrl = new RegExp(
-        "^(https?://)?(www.)?(docs.google.com/spreadsheets/d/)([a-zA-Z0-9-_]+)",
-      );
-      if (!spreadsheet_url) {
-        errors["spreadsheet_url_input"] = "Please enter a spreadsheet URL";
-      } else if (!isValidUrl.test(spreadsheet_url)) {
-        errors["spreadsheet_url_input"] =
-          "Please enter a valid spreadsheet URL";
-      }
-
-      if (Object.keys(errors).length > 0) {
-        console.log({
-          response_action: "errors",
-          errors: errors,
-        });
-        return {
-          response_action: "errors",
-          errors: errors,
-        };
-      }
-
-      const spreadsheet_id = spreadsheet_url.split("/")[5];
-      console.log("Spreadsheet ID: ", spreadsheet_id);
-
-      const chatResponse = await client.chat.postMessage({
-        channel: inputs.channel_id,
-        text:
-          `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
-        I'm going to update these accounts:\n 
-        - Ad Account: ${ad_account_name}\n 
-        - Ad Account ID: ${ad_account_id}\n 
-        - Spreadsheet URL: ${spreadsheet_url}`,
-      });
-      if (!chatResponse.ok) {
-        console.log(
-          "Failed to send a chat message",
-          chatResponse.error,
-        );
-      }
-
-      const payload = {
-        "channel_id": inputs.channel_id,
-        "ad_account_id": ad_account_id,
-        "spreadsheet_id": spreadsheet_id,
-        "fb_access_token": externalTokenFb,
-        "gs_access_token": externalTokenGs,
-      };
-
-      const response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/update/pull",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-      if (response.status != 200) {
-        const error =
-          `Failed to call the API endpoint! (status: ${response.status})`;
-        console.log(error);
-        console.log(response);
-        return { error };
-      }
-
-      return;
-    },
-  )
-  // Campaign Submission Handler
-  .addViewSubmissionHandler(
-    "fbSingleCampaign-form",
-    async ({ inputs, body, client }) => {
-      const ad_account_name = _ad_account_name;
-      const ad_account_id = _ad_account_id;
-      const campaign_name = body.view.state
-        .values["campaign_name_input"]["campaign_name_input-action"].value;
-      const campaign_objective = body.view.state
-        .values["objective_dropdown"]["objective_dropdown-select-action"]
-        .selected_option.value;
-      const campaign_status = body.view.state
-        .values["status_dropdown"]["status_dropdown-select-action"]
-        .selected_option.value;
-      const buying_type = body.view.state
-        .values["buying_type_dropdown"]["buying_dropdown-select-action"]
-        .selected_option.value;
-      const special_ad_categories = body.view.state
-        .values["special_ad_categories_input"]["multi_static_select-action"]
-        .selected_options.map((option: { text: { text: string } }) =>
-          option.text.text
-        );
-      console.log("Ad Account Name: ", ad_account_name);
-      console.log("Ad Account ID: ", ad_account_id);
-      console.log("Campaign Name: ", campaign_name);
-      console.log("Campaign Objective: ", campaign_objective);
-      console.log("Campaign Status: ", campaign_status);
-      console.log("Buying Type: ", buying_type);
-      console.log("Special Ad Categories: ", special_ad_categories);
-
-      // Form validation
-      const errors: formErrors = {};
-      if (!ad_account_id) {
-        errors["ad_account_id_dropdown"] = "Please select an ad account";
-      }
-
-      if (Object.keys(errors).length > 0) {
-        console.log({
-          response_action: "errors",
-          errors: errors,
-        });
-        return {
-          response_action: "errors",
-          errors: errors,
-        };
-      } else {
-        const ephemeralResponse = await client.chat.postEphemeral({
-          channel: inputs.channel_id,
-          user: inputs.user_id,
-          text:
-            `I'm working on a request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
-          Here's what I received:\n 
-          - Ad Account: ${ad_account_name}\n 
-          - Ad Account ID: ${ad_account_id}\n 
-          - Campaign Name: ${campaign_name}\n
-          - Campaign Objective: ${campaign_objective}\n
-          - Campaign Status: ${campaign_status}\n
-          - Buying Type: ${buying_type}\n
-          - Special Ad Categories: ${special_ad_categories.join(", ")}`,
-        });
-        if (!ephemeralResponse.ok) {
-          console.log(
-            "Failed to send an ephemeral message",
-            ephemeralResponse.error,
-          );
-        }
-        const payload = {
-          "campaign_name": campaign_name,
-          "campaign_objective": campaign_objective,
-          "campaign_status": campaign_status,
-          "campaign_buying_type": buying_type,
-          "special_ad_categories": special_ad_categories,
-          "ad_account_id": ad_account_id,
-          "access_token": externalTokenFb,
-        };
-        const response = await fetch(
-          "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/single",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          },
-        );
-        if (response.status != 200) {
-          const error =
-            `Failed to call the API endpoint! (status: ${response.status})`;
-          console.log(error);
-          console.log(response);
-          return { error };
-        }
-        return;
-      }
-    },
-  )
-  // Adset Submission Handler (TODO)
-  // Bulk Adsets Submission Handler
-  .addViewSubmissionHandler(
-    "fbBulkAdsets-form",
-    async ({ inputs, body, client }) => {
-      const ad_account_name = _ad_account_name;
-      const ad_account_id = _ad_account_id;
-      const spreadsheet_url = body.view.state
-        .values["spreadsheet_url_input"]["spreadsheet_url_input-action"].value;
-
-      // Form validation
-      const errors: formErrors = {};
-      if (!ad_account_id) {
-        errors["ad_account_id_dropdown"] = "Please select an ad account";
-      }
-      const isValidUrl = new RegExp(
-        "^(https?://)?(www.)?(docs.google.com/spreadsheets/d/)([a-zA-Z0-9-_]+)",
-      );
-      if (!spreadsheet_url) {
-        errors["spreadsheet_url_input"] = "Please enter a spreadsheet URL";
-      } else if (!isValidUrl.test(spreadsheet_url)) {
-        errors["spreadsheet_url_input"] =
-          "Please enter a valid spreadsheet URL";
-      }
-
-      if (Object.keys(errors).length > 0) {
-        console.log({
-          response_action: "errors",
-          errors: errors,
-        });
-        return {
-          response_action: "errors",
-          errors: errors,
-        };
-      }
-
-      const spreadsheet_id = spreadsheet_url.split("/")[5];
-      console.log("Spreadsheet ID: ", spreadsheet_id);
-
-      const ephemeralResponse = await client.chat.postEphemeral({
-        channel: inputs.channel_id,
-        user: inputs.user_id,
-        text:
-          `I'm working on an adset request from <@${inputs.user_id}>! :hammer_and_wrench: \n\n
-        Here's what I received:\n 
-        - Ad Account: ${ad_account_name}\n 
-        - Ad Account ID: ${ad_account_id}\n 
-        - Spreadsheet URL: ${spreadsheet_url}`,
-      });
-      if (!ephemeralResponse.ok) {
-        console.log(
-          "Failed to send an ephemeral message",
-          ephemeralResponse.error,
-        );
-      }
-
-      const payload = {
-        "channel_id": inputs.channel_id,
-        "ad_account_id": ad_account_id,
-        "spreadsheet_id": spreadsheet_id,
-        "fb_access_token": externalTokenFb,
-        "gs_access_token": externalTokenGs,
-      };
-
-      const response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adsets/bulk",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-      if (response.status != 200) {
-        const error =
-          `Failed to call the API endpoint! (status: ${response.status})`;
-        console.log(error);
-        console.log(response);
-        return { error };
-      }
-
-      return;
     },
   );
