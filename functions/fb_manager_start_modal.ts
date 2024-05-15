@@ -327,7 +327,7 @@ function update_saved_audiences_success_view(ad_account_name: string) {
     "callback_id": "fbSavedAudiences-success",
     "close": {
       "type": "plain_text",
-      "text": "Close",
+      "text": "Back to Menu",
       "emoji": true,
     },
     "title": {
@@ -383,7 +383,7 @@ function upload_admedia_success_view(ad_account_name: string) {
     "callback_id": "fbUploadAdMedia-success",
     "close": {
       "type": "plain_text",
-      "text": "Close",
+      "text": "Back to Menu",
       "emoji": true,
     },
     "title": {
