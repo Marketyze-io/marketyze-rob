@@ -807,6 +807,12 @@ export default SlackFunction(
     },
   )
   // Bulk Adcopies Button Handler (TODO: Implement this)
+  .addBlockActionsHandler(
+    "button-bulk-fb-adcopies",
+    async ({ inputs, body, client }) => {
+      // Prepare the lambda function payload
+    },
+  )
   // Ad Account Submission handler
   .addViewSubmissionHandler(
     "fb-ad-account-form",
