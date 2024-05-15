@@ -594,7 +594,7 @@ export default SlackFunction(
   // Reinitialise Button Handler
   .addBlockActionsHandler(
     "button-reinit",
-    async ({ inputs, client }) => {
+    async ({ inputs, client, body }) => {
       const init_payload = {
         "spreadsheet_id": _spreadsheet_id,
         "gs_access_token": externalTokenGs,
@@ -627,6 +627,7 @@ export default SlackFunction(
       // Show the loading view
       const response = await client.views.update({
         interactivity_pointer: inputs.interactivity.interactivity_pointer,
+        view_id: body.view.id,
         view: onboarding_loading_view,
       });
       // Handle the error if the modal was not opened successfully
