@@ -89,6 +89,22 @@ function main_menu_view(ad_account_name: string) {
         },
       },
       {
+        "type": "section",
+        "block_id": "section-upload-admedia",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*Upload* Ad Media",
+        },
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Start",
+          },
+          "action_id": "button-upload-admedia",
+        },
+      },
+      {
         "type": "divider",
       },
       {
@@ -354,6 +370,62 @@ function update_saved_audiences_failed_view(ad_account_name: string) {
           "type": "plain_text",
           "text":
             `:warning: The saved audiences for ${ad_account_name} failed to update! :warning:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function upload_admedia_success_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbUploadAdMedia-success",
+    "close": {
+      "type": "plain_text",
+      "text": "Close",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": truncateTitle(ad_account_name + " Ad Media"),
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:tada: The ad media for ${ad_account_name} is now being uploaded! :tada:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function upload_admedia_failed_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbUploadAdMedia-failure",
+    "close": {
+      "type": "plain_text",
+      "text": "Close",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": truncateTitle(ad_account_name + " Ad Media"),
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:warning: The ad media for ${ad_account_name} failed to upload! :warning:`,
           "emoji": true,
         },
       },
@@ -686,6 +758,62 @@ export default SlackFunction(
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
         view: update_saved_audiences_success_view(_ad_account_name),
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
+      };
+    },
+  )
+  // Upload Ad Media Button Handler
+  .addBlockActionsHandler(
+    "button-upload-admedia",
+    async ({ inputs, body, client }) => {
+      // Prepare the lambda function payload
+      const payload = {
+        "channel_id": inputs.channel_id,
+        "ad_account_id": _ad_account_id,
+        "ad_account_name": _ad_account_name,
+        "spreadsheet_id": _spreadsheet_id,
+        "fb_access_token": externalTokenFb,
+        "gs_access_token": externalTokenGs,
+      };
+
+      // Call the lambda function to upload ad media
+      const upload_admedia_response = await fetch(
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/admedia/upload",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (upload_admedia_response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${upload_admedia_response.status})`;
+        console.log(error);
+        console.log(upload_admedia_response);
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: upload_admedia_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
+      }
+
+      // Update the modal with a new view
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: upload_admedia_success_view(_ad_account_name),
       });
       if (response.error) {
         const error = `Failed to update a modal due to ${response.error}`;
