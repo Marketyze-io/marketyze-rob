@@ -321,6 +321,62 @@ function bulk_adsets_failed_view(ad_account_name: string) {
   };
 }
 
+function bulk_adcopies_success_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbBulkAdcopies-success",
+    "close": {
+      "type": "plain_text",
+      "text": "Back to Menu",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": truncateTitle(ad_account_name + " Adcopies"),
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:muscle: I'll get to work on creating those adcopies for ${ad_account_name}! :muscle:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function bulk_adcopies_failed_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbBulkAdcopies-failure",
+    "close": {
+      "type": "plain_text",
+      "text": "Back to Menu",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": truncateTitle(ad_account_name + " Adcopies"),
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:warning: Something went wrong when starting work on the adcopies for ${ad_account_name}! :warning:\n This is probably a bug, please let my maintainers know.`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
 function update_saved_audiences_success_view(ad_account_name: string) {
   return {
     "type": "modal",
@@ -939,6 +995,55 @@ export default SlackFunction(
     "button-bulk-fb-adcopies",
     async ({ inputs, body, client }) => {
       // Prepare the lambda function payload
+      const payload = {
+        "channel_id": inputs.channel_id,
+        "ad_account_id": _ad_account_id,
+        "ad_account_name": _ad_account_name,
+        "spreadsheet_id": _spreadsheet_id,
+        "fb_access_token": externalTokenFb,
+        "gs_access_token": externalTokenGs,
+      };
+
+      // Call the lambda function to create bulk adcopies
+      const bulk_adcopies_response = await fetch(
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adcopies/bulk",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (bulk_adcopies_response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${bulk_adcopies_response.status})`;
+        console.log(error);
+        console.log(bulk_adcopies_response);
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: bulk_adcopies_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
+      }
+
+      // Update the modal with a new view
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: bulk_adcopies_success_view(_ad_account_name),
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
+      };
     },
   )
   // Ad Account Submission handler
