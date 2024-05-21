@@ -90,6 +90,22 @@ function main_menu_view(ad_account_name: string) {
       },
       {
         "type": "section",
+        "block_id": "section-update-pages",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*Update* Facebook Pages",
+        },
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Start",
+          },
+          "action_id": "button-update-pages",
+        },
+      },
+      {
+        "type": "section",
         "block_id": "section-upload-admedia",
         "text": {
           "type": "mrkdwn",
@@ -426,6 +442,62 @@ function update_saved_audiences_failed_view(ad_account_name: string) {
           "type": "plain_text",
           "text":
             `:warning: The saved audiences for ${ad_account_name} failed to update! :warning:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function update_pages_success_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbUpdatePages-success",
+    "close": {
+      "type": "plain_text",
+      "text": "Back to Menu",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": truncateTitle(ad_account_name + " Pages"),
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:tada: The pages for ${ad_account_name} have been updated successfully! :tada:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function update_pages_failed_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbUpdatePages-failure",
+    "close": {
+      "type": "plain_text",
+      "text": "Close",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": truncateTitle(ad_account_name + " Pages"),
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:warning: The pages for ${ad_account_name} failed to update! :warning:`,
           "emoji": true,
         },
       },
@@ -814,6 +886,57 @@ export default SlackFunction(
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
         view: update_saved_audiences_success_view(_ad_account_name),
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
+      };
+    },
+  )
+  // Update Pages Button Handler
+  .addBlockActionsHandler(
+    "button-update-pages",
+    async ({ client, body }) => {
+      // Call the lambda function to update pages
+      const update_pages_endpoint =
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/pages/update";
+      const update_pages_response = await fetch(update_pages_endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fb_access_token: externalTokenFb,
+          ad_account_id: _ad_account_id,
+          gs_access_token: externalTokenGs,
+          spreadsheet_id: _spreadsheet_id,
+        }),
+      });
+
+      // Handle the error if the lambda function was not called successfully
+      if (update_pages_response.status != 200) {
+        const response_text = await update_pages_response.text();
+        const _error =
+          `Failed to call lambda function! (status: ${update_pages_response.status}, body: ${response_text})`;
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: update_pages_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
+      }
+
+      // Update the modal with a new view
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: update_pages_success_view(_ad_account_name),
       });
       if (response.error) {
         const error = `Failed to update a modal due to ${response.error}`;
