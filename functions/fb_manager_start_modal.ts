@@ -190,6 +190,25 @@ function main_menu_view(ad_account_name: string) {
       {
         "type": "divider",
       },
+      {
+        "type": "section",
+        "block_id": "section-queue-adsets",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*Queue* Facebook Adsets",
+        },
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Start",
+          },
+          "action_id": "button-queue-fb-adsets",
+        },
+      },
+      {
+        "type": "divider",
+      },
     ],
   };
 }
@@ -1230,6 +1249,61 @@ export default SlackFunction(
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
         view: bulk_campaigns_success_view(_ad_account_name),
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
+      };
+    },
+  )
+  // Queue Adsets Button Handler
+  .addBlockActionsHandler(
+    "button-queue-fb-adsets",
+    async ({ inputs, body, client }) => {
+      // Prepare the lambda function payload
+      const payload = {
+        "channel_id": inputs.channel_id,
+        "ad_account_id": _ad_account_id,
+        "spreadsheet_id": _spreadsheet_id,
+        "fb_access_token": externalTokenFb,
+        "gs_access_token": externalTokenGs,
+      };
+
+      // Call the lambda function to create bulk adsets
+      const bulk_adsets_response = await fetch(
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adsets/queue",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (bulk_adsets_response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${bulk_adsets_response.status})`;
+        console.log(error);
+        console.log(bulk_adsets_response);
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: bulk_adsets_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
+      }
+
+      // Update the modal with a new view
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: bulk_adsets_success_view(_ad_account_name),
       });
       if (response.error) {
         const error = `Failed to update a modal due to ${response.error}`;
