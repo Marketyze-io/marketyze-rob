@@ -105,73 +105,6 @@ function main_menu_view(ad_account_name: string) {
         },
       },
       {
-        "type": "section",
-        "block_id": "section-upload-admedia",
-        "text": {
-          "type": "mrkdwn",
-          "text": "*Upload* Ad Media",
-        },
-        "accessory": {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Start",
-          },
-          "action_id": "button-upload-admedia",
-        },
-      },
-      {
-        "type": "divider",
-      },
-      {
-        "type": "section",
-        "block_id": "section-bulk-campaigns",
-        "text": {
-          "type": "mrkdwn",
-          "text": "*Bulk Import* Facebook Ad Campaigns",
-        },
-        "accessory": {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Start",
-          },
-          "action_id": "button-bulk-fb-campaigns",
-        },
-      },
-      {
-        "type": "section",
-        "block_id": "section-bulk-adsets",
-        "text": {
-          "type": "mrkdwn",
-          "text": "*Bulk Import* Facebook Adsets",
-        },
-        "accessory": {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Start",
-          },
-          "action_id": "button-bulk-fb-adsets",
-        },
-      },
-      {
-        "type": "section",
-        "block_id": "section-bulk-adcopies",
-        "text": {
-          "type": "mrkdwn",
-          "text": "*Bulk Import* Facebook Adcopies",
-        },
-        "accessory": {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Start",
-          },
-          "action_id": "button-bulk-fb-adcopies",
-        },
-      },
-      {
         "type": "divider",
       },
       {
@@ -179,7 +112,7 @@ function main_menu_view(ad_account_name: string) {
         "block_id": "section-queue-campaigns",
         "text": {
           "type": "mrkdwn",
-          "text": "*Queue* Facebook Ad Campaigns",
+          "text": "*Import* Facebook Ad Campaigns",
         },
         "accessory": {
           "type": "button",
@@ -195,7 +128,7 @@ function main_menu_view(ad_account_name: string) {
         "block_id": "section-queue-adsets",
         "text": {
           "type": "mrkdwn",
-          "text": "*Queue* Facebook Adsets",
+          "text": "*Import* Facebook Adsets",
         },
         "accessory": {
           "type": "button",
@@ -211,7 +144,7 @@ function main_menu_view(ad_account_name: string) {
         "block_id": "section-queue-admedia",
         "text": {
           "type": "mrkdwn",
-          "text": "*Queue* Facebook Admedia",
+          "text": "*Upload* Facebook Ad Media",
         },
         "accessory": {
           "type": "button",
@@ -227,7 +160,7 @@ function main_menu_view(ad_account_name: string) {
         "block_id": "section-queue-ads",
         "text": {
           "type": "mrkdwn",
-          "text": "*Queue* Facebook Ads",
+          "text": "*Import* Facebook Ads",
         },
         "accessory": {
           "type": "button",
@@ -237,9 +170,6 @@ function main_menu_view(ad_account_name: string) {
           },
           "action_id": "button-queue-fb-ads",
         },
-      },
-      {
-        "type": "divider",
       },
     ],
   };
@@ -404,7 +334,7 @@ function bulk_adsets_failed_view(ad_account_name: string) {
   };
 }
 
-function bulk_adcopies_success_view(ad_account_name: string) {
+function bulk_ads_success_view(ad_account_name: string) {
   return {
     "type": "modal",
     "callback_id": "fbBulkAdcopies-success",
@@ -432,7 +362,7 @@ function bulk_adcopies_success_view(ad_account_name: string) {
   };
 }
 
-function bulk_adcopies_failed_view(ad_account_name: string) {
+function bulk_ads_failed_view(ad_account_name: string) {
   return {
     "type": "modal",
     "callback_id": "fbBulkAdcopies-failure",
@@ -1014,228 +944,6 @@ export default SlackFunction(
       };
     },
   )
-  // Upload Ad Media Button Handler
-  .addBlockActionsHandler(
-    "button-upload-admedia",
-    async ({ inputs, body, client }) => {
-      // Prepare the lambda function payload
-      const payload = {
-        "channel_id": inputs.channel_id,
-        "ad_account_id": _ad_account_id,
-        "ad_account_name": _ad_account_name,
-        "spreadsheet_id": _spreadsheet_id,
-        "fb_access_token": externalTokenFb,
-        "gs_access_token": externalTokenGs,
-      };
-
-      // Call the lambda function to upload ad media
-      const upload_admedia_response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/admedia/upload",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-      if (upload_admedia_response.status != 200) {
-        const error =
-          `Failed to call the API endpoint! (status: ${upload_admedia_response.status})`;
-        console.log(error);
-        console.log(upload_admedia_response);
-        const response = await client.views.push({
-          interactivity_pointer: body.interactivity.interactivity_pointer,
-          view_id: body.view.id,
-          view: upload_admedia_failed_view(_ad_account_name),
-        });
-        if (response.error) {
-          const error = `Failed to update a modal due to ${response.error}`;
-          return { error };
-        }
-      }
-
-      // Update the modal with a new view
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: upload_admedia_success_view(_ad_account_name),
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
-      return {
-        completed: false,
-      };
-    },
-  )
-  // Bulk Campaigns Button Handler
-  .addBlockActionsHandler(
-    "button-bulk-fb-campaigns",
-    async ({ inputs, body, client }) => {
-      // Prepare the lambda function payload
-      const payload = {
-        "channel_id": inputs.channel_id,
-        "ad_account_id": _ad_account_id,
-        "spreadsheet_id": _spreadsheet_id,
-        "fb_access_token": externalTokenFb,
-        "gs_access_token": externalTokenGs,
-      };
-
-      // Call the lambda function to create bulk campaigns
-      const bulk_campaigns_response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/bulk",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-      if (bulk_campaigns_response.status != 200) {
-        const error =
-          `Failed to call the API endpoint! (status: ${bulk_campaigns_response.status})`;
-        console.log(error);
-        console.log(bulk_campaigns_response);
-        const response = await client.views.push({
-          interactivity_pointer: body.interactivity.interactivity_pointer,
-          view_id: body.view.id,
-          view: bulk_campaigns_failed_view(_ad_account_name),
-        });
-        if (response.error) {
-          const error = `Failed to update a modal due to ${response.error}`;
-          return { error };
-        }
-      }
-
-      // Update the modal with a new view
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: bulk_campaigns_success_view(_ad_account_name),
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
-      return {
-        completed: false,
-      };
-    },
-  )
-  // Bulk Adsets Button Handler
-  .addBlockActionsHandler(
-    "button-bulk-fb-adsets",
-    async ({ inputs, body, client }) => {
-      // Prepare the lambda function payload
-      const payload = {
-        "channel_id": inputs.channel_id,
-        "ad_account_id": _ad_account_id,
-        "spreadsheet_id": _spreadsheet_id,
-        "fb_access_token": externalTokenFb,
-        "gs_access_token": externalTokenGs,
-      };
-
-      // Call the lambda function to create bulk adsets
-      const bulk_adsets_response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adsets/bulk",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-      if (bulk_adsets_response.status != 200) {
-        const error =
-          `Failed to call the API endpoint! (status: ${bulk_adsets_response.status})`;
-        console.log(error);
-        console.log(bulk_adsets_response);
-        const response = await client.views.push({
-          interactivity_pointer: body.interactivity.interactivity_pointer,
-          view_id: body.view.id,
-          view: bulk_adsets_failed_view(_ad_account_name),
-        });
-        if (response.error) {
-          const error = `Failed to update a modal due to ${response.error}`;
-          return { error };
-        }
-      }
-
-      // Update the modal with a new view
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: bulk_adsets_success_view(_ad_account_name),
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
-      return {
-        completed: false,
-      };
-    },
-  )
-  // Bulk Adcopies Button Handler
-  .addBlockActionsHandler(
-    "button-bulk-fb-adcopies",
-    async ({ inputs, body, client }) => {
-      // Prepare the lambda function payload
-      const payload = {
-        "channel_id": inputs.channel_id,
-        "ad_account_id": _ad_account_id,
-        "ad_account_name": _ad_account_name,
-        "spreadsheet_id": _spreadsheet_id,
-        "fb_access_token": externalTokenFb,
-        "gs_access_token": externalTokenGs,
-      };
-
-      // Call the lambda function to create bulk adcopies
-      const bulk_adcopies_response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adcopies/bulk",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-      if (bulk_adcopies_response.status != 200) {
-        const error =
-          `Failed to call the API endpoint! (status: ${bulk_adcopies_response.status})`;
-        console.log(error);
-        console.log(bulk_adcopies_response);
-        const response = await client.views.push({
-          interactivity_pointer: body.interactivity.interactivity_pointer,
-          view_id: body.view.id,
-          view: bulk_adcopies_failed_view(_ad_account_name),
-        });
-        if (response.error) {
-          const error = `Failed to update a modal due to ${response.error}`;
-          return { error };
-        }
-      }
-
-      // Update the modal with a new view
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: bulk_adcopies_success_view(_ad_account_name),
-      });
-      if (response.error) {
-        const error = `Failed to update a modal due to ${response.error}`;
-        return { error };
-      }
-      return {
-        completed: false,
-      };
-    },
-  )
   // Queue Campaigns Button Handler
   .addBlockActionsHandler(
     "button-queue-fb-campaigns",
@@ -1434,7 +1142,7 @@ export default SlackFunction(
         const response = await client.views.push({
           interactivity_pointer: body.interactivity.interactivity_pointer,
           view_id: body.view.id,
-          view: bulk_adcopies_failed_view(_ad_account_name),
+          view: bulk_ads_failed_view(_ad_account_name),
         });
         if (response.error) {
           const error = `Failed to update a modal due to ${response.error}`;
@@ -1446,7 +1154,7 @@ export default SlackFunction(
       const response = await client.views.push({
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
-        view: bulk_adsets_success_view(_ad_account_name),
+        view: bulk_ads_success_view(_ad_account_name),
       });
       if (response.error) {
         const error = `Failed to update a modal due to ${response.error}`;
