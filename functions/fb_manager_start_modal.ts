@@ -105,6 +105,22 @@ function main_menu_view(ad_account_name: string) {
         },
       },
       {
+        "type": "section",
+        "block_id": "section-update-adspixels",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*Update* Facebook AdsPixels",
+        },
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Start",
+          },
+          "action_id": "button-update-adspixels",
+        },
+      },
+      {
         "type": "divider",
       },
       {
@@ -495,6 +511,62 @@ function update_pages_failed_view(ad_account_name: string) {
           "type": "plain_text",
           "text":
             `:warning: The pages for ${ad_account_name} failed to update! :warning:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function update_adspixels_success_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbUpdateAdspixels-success",
+    "close": {
+      "type": "plain_text",
+      "text": "Back to Menu",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": truncateTitle(ad_account_name + " AdsPixels"),
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:tada: The adspixels for ${ad_account_name} have been updated successfully! :tada:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function update_adspixels_failed_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbUpdateAdspixels-failure",
+    "close": {
+      "type": "plain_text",
+      "text": "Close",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": truncateTitle(ad_account_name + " AdsPixels"),
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:warning: The adspixels for ${ad_account_name} failed to update! :warning:`,
           "emoji": true,
         },
       },
@@ -934,6 +1006,57 @@ export default SlackFunction(
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
         view: update_pages_success_view(_ad_account_name),
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
+      };
+    },
+  )
+  // Update AdsPixels Button Handler
+  .addBlockActionsHandler(
+    "button-update-adspixels",
+    async ({ client, body }) => {
+      // Call the lambda function to update adspixels
+      const update_adspixels_endpoint =
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adspixels/update";
+      const update_adspixels_response = await fetch(update_adspixels_endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fb_access_token: externalTokenFb,
+          ad_account_id: _ad_account_id,
+          gs_access_token: externalTokenGs,
+          spreadsheet_id: _spreadsheet_id,
+        }),
+      });
+
+      // Handle the error if the lambda function was not called successfully
+      if (update_adspixels_response.status != 200) {
+        const response_text = await update_adspixels_response.text();
+        const _error =
+          `Failed to call lambda function! (status: ${update_adspixels_response.status}, body: ${response_text})`;
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: update_adspixels_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
+      }
+
+      // Update the modal with a new view
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: update_adspixels_success_view(_ad_account_name),
       });
       if (response.error) {
         const error = `Failed to update a modal due to ${response.error}`;
