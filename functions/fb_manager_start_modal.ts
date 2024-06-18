@@ -173,6 +173,22 @@ function main_menu_view(ad_account_name: string) {
       },
       {
         "type": "section",
+        "block_id": "section-queue-adcarousels",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*Prepare* Facebook Ad Carousels",
+        },
+        "accessory": {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Start",
+          },
+          "action_id": "button-queue-fb-adcarousels",
+        },
+      },
+      {
+        "type": "section",
         "block_id": "section-queue-ads",
         "text": {
           "type": "mrkdwn",
@@ -623,6 +639,62 @@ function upload_admedia_failed_view(ad_account_name: string) {
           "type": "plain_text",
           "text":
             `:warning: The ad media for ${ad_account_name} failed to upload! :warning:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function prepare_adcarousels_success_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbPrepareAdCarousels-success",
+    "close": {
+      "type": "plain_text",
+      "text": "Back to Menu",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": truncateTitle(ad_account_name + " Ad Carousels"),
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:tada: The ad carousels for ${ad_account_name} are now being prepared! :tada:`,
+          "emoji": true,
+        },
+      },
+    ],
+  };
+}
+
+function prepare_adcarousels_failed_view(ad_account_name: string) {
+  return {
+    "type": "modal",
+    "callback_id": "fbPrepareAdCarousels-failure",
+    "close": {
+      "type": "plain_text",
+      "text": "Close",
+      "emoji": true,
+    },
+    "title": {
+      "type": "plain_text",
+      "text": truncateTitle(ad_account_name + " Ad Carousels"),
+      "emoji": true,
+    },
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "plain_text",
+          "text":
+            `:warning: The ad carousels for ${ad_account_name} failed to prepare! :warning:`,
           "emoji": true,
         },
       },
@@ -1223,6 +1295,62 @@ export default SlackFunction(
         interactivity_pointer: body.interactivity.interactivity_pointer,
         view_id: body.view.id,
         view: upload_admedia_success_view(_ad_account_name),
+      });
+      if (response.error) {
+        const error = `Failed to update a modal due to ${response.error}`;
+        return { error };
+      }
+      return {
+        completed: false,
+      };
+    },
+  )
+  // Queue Ad Carousels Button Handler
+  .addBlockActionsHandler(
+    "button-queue-fb-adcarousels",
+    async ({ inputs, body, client }) => {
+      // Prepare the lambda function payload
+      const payload = {
+        "channel_id": inputs.channel_id,
+        "ad_account_id": _ad_account_id,
+        "ad_account_name": _ad_account_name,
+        "spreadsheet_id": _spreadsheet_id,
+        "fb_access_token": externalTokenFb,
+        "gs_access_token": externalTokenGs,
+      };
+
+      // Call the lambda function to prepare ad carousels
+      const prepare_adcarousels_response = await fetch(
+        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adcarousels/queue",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (prepare_adcarousels_response.status != 200) {
+        const error =
+          `Failed to call the API endpoint! (status: ${prepare_adcarousels_response.status})`;
+        console.log(error);
+        console.log(prepare_adcarousels_response);
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: prepare_adcarousels_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          const error = `Failed to update a modal due to ${response.error}`;
+          return { error };
+        }
+      }
+
+      // Update the modal with a new view
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: prepare_adcarousels_success_view(_ad_account_name),
       });
       if (response.error) {
         const error = `Failed to update a modal due to ${response.error}`;
