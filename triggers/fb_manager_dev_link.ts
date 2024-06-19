@@ -4,7 +4,7 @@ import { TriggerContextData, TriggerTypes } from "deno-slack-api/mod.ts";
 
 const fbManagerDevTrigger: Trigger<typeof fbManagerDevWorkflow.definition> = {
   type: TriggerTypes.Shortcut,
-  name: "Open FB Marketing Manager",
+  name: "FB Manager (Dev Mode)",
   workflow: `#/workflows/${fbManagerDevWorkflow.definition.callback_id}`,
   inputs: {
     user_id: {
