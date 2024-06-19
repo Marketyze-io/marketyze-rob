@@ -1,7 +1,10 @@
 import { DefineOAuth2Provider, Manifest, Schema } from "deno-slack-sdk/mod.ts";
 import { FbManagerStartModalFunction } from "./functions/fb_manager_start_modal.ts";
+import { FbManagerDevModalFunction } from "./functions/fb_manager_dev_modal.ts";
 import fbManagerWorkflow from "./workflows/fb_manager_workflow.ts";
+import fbManagerDevWorkflow from "./workflows/fb_manager_dev_workflow.ts";
 import fbMeWorkflow from "./workflows/fb_me_workflow.ts";
+import sayHiWorkflow from "./workflows/say_hi_workflow.ts";
 import { FbMeFunction } from "./functions/fb_me.ts";
 
 const FbOAuthProvider = DefineOAuth2Provider({
@@ -51,14 +54,21 @@ const GoogleSheetsOAuthProvider = DefineOAuth2Provider({
  * https://api.slack.com/automation/manifest
  */
 export default Manifest({
-  name: "Marketyze Auth for Slack",
-  description: "A Slack App to help with authentication for external APIs",
-  icon: "assets/white_icon.png",
+  name: "Slack Rob",
+  description:
+    "This is Rob. Rob is a robot. This version of Rob lives in the Slack Platform",
+  icon: "assets/rob_icon.png",
   functions: [
     FbManagerStartModalFunction,
+    FbManagerDevModalFunction,
     FbMeFunction,
   ],
-  workflows: [fbManagerWorkflow, fbMeWorkflow],
+  workflows: [
+    fbManagerWorkflow,
+    fbManagerDevWorkflow,
+    fbMeWorkflow,
+    sayHiWorkflow,
+  ],
   outgoingDomains: [
     "graph.facebook.com",
     "facebook.com",
@@ -75,6 +85,10 @@ export default Manifest({
     "datastore:read",
     "datastore:write",
     "triggers:write",
+    "app_mentions:read",
   ],
-  externalAuthProviders: [FbOAuthProvider, GoogleSheetsOAuthProvider],
+  externalAuthProviders: [
+    FbOAuthProvider,
+    GoogleSheetsOAuthProvider,
+  ],
 });

@@ -17,9 +17,9 @@ interface formErrors {
 
 const AWS_ROOT_URL =
   "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com";
-const AWS_API_STAGE = "prod";
+const AWS_API_STAGE = "dev";
 const INIT_ENDPOINT =
-  "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/ad-accounts/init";
+  "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/dev/ad-accounts/init";
 const GOOGLE_SHEETS_ROOT_URL = "https://sheets.googleapis.com/v4/spreadsheets/";
 const MASTER_SHEET_ID = "1am9nNSWcUYpbvHFA8nk0GAvzedYvyBGTqNNT9YAX0wM";
 
@@ -749,10 +749,10 @@ const onboarding_failed_view = {
 };
 
 // Function Definition
-export const FbManagerStartModalFunction = DefineFunction({
-  callback_id: "fb-manager-start-modal",
-  title: "FB Manager Start Modal",
-  source_file: "functions/fb_manager_start_modal.ts",
+export const FbManagerDevModalFunction = DefineFunction({
+  callback_id: "fb-manager-dev-modal",
+  title: "FB Manager Dev Modal",
+  source_file: "functions/fb_manager_dev_modal.ts",
   input_parameters: {
     properties: {
       user_id: {
@@ -780,7 +780,7 @@ export const FbManagerStartModalFunction = DefineFunction({
 
 // Function Implementation
 export default SlackFunction(
-  FbManagerStartModalFunction,
+  FbManagerDevModalFunction,
   async ({ inputs, client }) => {
     // Retrieve the Facebook external token
     const tokenResponse = await client.apps.auth.external.get({
