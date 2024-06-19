@@ -1,5 +1,5 @@
 import { DefineWorkflow, Schema } from "deno-slack-sdk/mod.ts";
-import { FbManagerStartModalFunction } from "../functions/fb_manager_start_modal.ts";
+import { FbManagerDevModalFunction } from "../functions/fb_manager_dev_modal.ts";
 
 const fbManagerDevWorkflow = DefineWorkflow({
   callback_id: "fb-manager-dev-workflow",
@@ -29,7 +29,7 @@ const fbManagerDevWorkflow = DefineWorkflow({
   },
 });
 
-fbManagerDevWorkflow.addStep(FbManagerStartModalFunction, {
+fbManagerDevWorkflow.addStep(FbManagerDevModalFunction, {
   user_id: fbManagerDevWorkflow.inputs.user_id,
   channel_id: fbManagerDevWorkflow.inputs.channel_id,
   interactivity: fbManagerDevWorkflow.inputs.interactivity,

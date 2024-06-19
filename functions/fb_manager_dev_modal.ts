@@ -19,7 +19,7 @@ const AWS_ROOT_URL =
   "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com";
 const AWS_API_STAGE = "dev";
 const INIT_ENDPOINT =
-  "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/ad-accounts/init";
+  "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/dev/ad-accounts/init";
 const GOOGLE_SHEETS_ROOT_URL = "https://sheets.googleapis.com/v4/spreadsheets/";
 const MASTER_SHEET_ID = "1am9nNSWcUYpbvHFA8nk0GAvzedYvyBGTqNNT9YAX0wM";
 
