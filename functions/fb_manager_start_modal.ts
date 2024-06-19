@@ -15,6 +15,9 @@ interface formErrors {
   [key: string]: string;
 }
 
+const AWS_ROOT_URL =
+  "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com";
+const AWS_API_STAGE = "prod";
 const INIT_ENDPOINT =
   "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/ad-accounts/init";
 const GOOGLE_SHEETS_ROOT_URL = "https://sheets.googleapis.com/v4/spreadsheets/";
@@ -989,7 +992,7 @@ export default SlackFunction(
     async ({ client, body }) => {
       // Call the lambda function to update saved audiences
       const update_saved_audiences_endpoint =
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/audiences/update";
+        `${AWS_ROOT_URL}/${AWS_API_STAGE}/audiences/update`;
       const update_saved_audiences_response = await fetch(
         update_saved_audiences_endpoint,
         {
@@ -1043,7 +1046,7 @@ export default SlackFunction(
     async ({ client, body }) => {
       // Call the lambda function to update pages
       const update_pages_endpoint =
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/pages/update";
+        `${AWS_ROOT_URL}/${AWS_API_STAGE}/pages/update`;
       const update_pages_response = await fetch(update_pages_endpoint, {
         method: "POST",
         headers: {
@@ -1094,7 +1097,7 @@ export default SlackFunction(
     async ({ client, body }) => {
       // Call the lambda function to update adspixels
       const update_adspixels_endpoint =
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adspixels/update";
+        `${AWS_ROOT_URL}/${AWS_API_STAGE}/adspixels/update`;
       const update_adspixels_response = await fetch(update_adspixels_endpoint, {
         method: "POST",
         headers: {
@@ -1154,7 +1157,7 @@ export default SlackFunction(
 
       // Call the lambda function to create bulk campaigns
       const bulk_campaigns_response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/campaigns/queue",
+        `${AWS_ROOT_URL}/${AWS_API_STAGE}/campaigns`,
         {
           method: "POST",
           headers: {
@@ -1209,7 +1212,7 @@ export default SlackFunction(
 
       // Call the lambda function to create bulk adsets
       const bulk_adsets_response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adsets/queue",
+        `${AWS_ROOT_URL}/${AWS_API_STAGE}/adsets`,
         {
           method: "POST",
           headers: {
@@ -1265,7 +1268,7 @@ export default SlackFunction(
 
       // Call the lambda function to upload ad media
       const upload_admedia_response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/admedia/queue",
+        `${AWS_ROOT_URL}/${AWS_API_STAGE}/admedia`,
         {
           method: "POST",
           headers: {
@@ -1321,7 +1324,7 @@ export default SlackFunction(
 
       // Call the lambda function to prepare ad carousels
       const prepare_adcarousels_response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/adcarousels/queue",
+        `${AWS_ROOT_URL}/${AWS_API_STAGE}/adcarousels`,
         {
           method: "POST",
           headers: {
@@ -1376,7 +1379,7 @@ export default SlackFunction(
 
       // Call the lambda function to create bulk adsets
       const bulk_ads_response = await fetch(
-        "https://srdb19dj4h.execute-api.ap-southeast-1.amazonaws.com/default/ads/queue",
+        `${AWS_ROOT_URL}/${AWS_API_STAGE}/ads`,
         {
           method: "POST",
           headers: {
