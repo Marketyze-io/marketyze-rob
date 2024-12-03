@@ -748,6 +748,48 @@ const onboarding_failed_view = {
   ],
 };
 
+const express = require('express');
+const bodyParser = require('body-parser');
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.use(bodyParser.urlencoded({ extended: true })); // For parsing form data
+
+// Handle slash command request
+app.post('/duplicate_ads', (req, res) => {
+  const { text, user_id, channel_id } = req.body;
+
+  console.log(`Received slash command from ${user_id} in channel ${channel_id}`);
+  console.log(`Command text: ${text}`);
+
+  // You can now process the slash command and send a response
+  res.send({
+    response_type: 'ephemeral',  // Sends the response only to the user who invoked the command
+    text: 'To duplicate ads, please click the button below to log in with Facebook!',
+    attachments: [
+      {
+        text: 'Click the button to start the process.',
+        fallback: 'You are unable to login',
+        callback_id: 'login_button_click',
+        actions: [
+          {
+            type: 'button',
+            text: 'Login with Facebook',
+            action_id: 'login_button_click',
+            style: 'primary',
+            url: 'https://www.facebook.com/v14.0/dialog/oauth?client_id=YOUR_FB_APP_ID&redirect_uri=YOUR_REDIRECT_URI&scope=ads_management',
+          },
+        ],
+      },
+    ],
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
+
 // Function Definition
 export const FbManagerStartModalFunction = DefineFunction({
   callback_id: "fb-manager-start-modal",
