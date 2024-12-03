@@ -2,86 +2,52 @@ import { Trigger } from "deno-slack-sdk/types.ts";
 import fbManagerWorkflow from "../workflows/fb_manager_workflow.ts";
 import { TriggerContextData, TriggerTypes } from "deno-slack-api/mod.ts";
 
-// Shortcut trigger that starts the workflow
 const fbManagerTrigger: Trigger<typeof fbManagerWorkflow.definition> = {
-  type: TriggerTypes.Shortcut, // Shortcut trigger type
+  type: TriggerTypes.Shortcut, // The type of trigger (e.g., shortcut)
   name: "Open FB Marketing Manager", // The name of the shortcut
-  workflow: `#/workflows/${fbManagerWorkflow.definition.callback_id}`, // Point to the workflow
+  workflow: `#/workflows/${fbManagerWorkflow.definition.callback_id}`, // Reference the workflow
   inputs: {
     user_id: { value: TriggerContextData.Shortcut.user_id },
     channel_id: { value: TriggerContextData.Shortcut.channel_id },
     interactivity: { value: TriggerContextData.Shortcut.interactivity },
+    // Pass client_account_id through the workflow trigger manually, if it's relevant to the context
+    // Example: client_account_id: { value: some_value }  // Define where to get this value
   },
 };
 
 // Handle slash command request
-app.action("duplicate_ads", async ({ body, ack, respond }) => {
-  await ack();
-
-  const userId = body.user.id;
-  const clientAccountId = body.actions[0].selected_option.value;
-
-  // Trigger a workflow for duplicating ads
-  await app.client.workflows.start({
-    trigger_id: body.trigger_id,
-    workflow: "duplicate-ads-workflow", // Reference the appropriate workflow
-    inputs: {
-      user_id: userId,
-      client_account_id: clientAccountId,
-    },
-  });
-
-  // Respond to the user to confirm the action
-  await respond({
-    text:
-      `Starting the ad duplication process for client account: ${clientAccountId}.`,
-  });
-});
+export const duplicateAdsTrigger: Trigger = {
+  type: TriggerTypes.Shortcut, // Action trigger type
+  name: "duplicate_ads", // Name of the action
+  workflow: "#/workflows/duplicate-ads-workflow", // Reference the workflow
+  inputs: {
+    user_id: { value: TriggerContextData.Shortcut.user_id }, // Extract user_id from context
+    client_account_id: { value: TriggerContextData.Shortcut.channel_id }, // Adjust to where client_account_id comes from
+  },
+};
 
 // Handle button interaction (login_button_click)
-app.action("login_button_click", async ({ body, ack, respond }) => {
-  await ack(); // Acknowledge the action immediately
-
-  // You can use `app.client.workflows.start` to trigger a workflow
-  await app.client.workflows.start({
-    trigger_id: body.trigger_id, // Pass the trigger_id from the interaction
-    workflow: "fb-manager-workflow", // Specify the workflow callback_id
-    inputs: {
-      user_id: body.user.id, // User who clicked the button
-      channel_id: body.channel.id, // Channel where the interaction took place
-      interactivity: true, // Flag if interaction is needed
-      fbAccessTokenId: body.user.id, // Facebook access token
-    },
-  });
-
-  // Respond with a message or feedback
-  await respond({
-    text: "Starting the Facebook Manager workflow...",
-  });
-});
+export const loginButtonClickTrigger: Trigger = {
+  type: TriggerTypes.Shortcut, // Action type trigger
+  name: "login_button_click", // Name of the action
+  workflow: "#/workflows/fb-manager-workflow", // Reference the workflow for Facebook login
+  inputs: {
+    user_id: { value: TriggerContextData.Shortcut.user_id },
+    channel_id: { value: TriggerContextData.Shortcut.channel_id },
+    interactivity: { value: TriggerContextData.Shortcut.interactivity },
+    fbAccessTokenId: { value: "fb-access-token" }, // This would typically be passed from OAuth flow
+  },
+};
 
 // Handle client account selection
-app.action("client_account_select", async ({ body, ack, respond }) => {
-  await ack(); // Acknowledge the interaction
-
-  const selectedClientAccountId = body.actions[0].selected_option.value;
-  const userId = body.user.id;
-
-  // Trigger a workflow for handling the selected client account
-  await app.client.workflows.start({
-    trigger_id: body.trigger_id,
-    workflow: "client-account-selection-workflow", // Reference the workflow
-    inputs: {
-      user_id: userId,
-      client_account_id: selectedClientAccountId,
-    },
-  });
-
-  // Respond with confirmation
-  await respond({
-    text:
-      `Selected client account: ${selectedClientAccountId}. Processing your request.`,
-  });
-});
+export const clientAccountSelectTrigger: Trigger = {
+  type: TriggerTypes.Shortcut, // Action trigger type
+  name: "client_account_select", // The name of the action
+  workflow: "#/workflows/client-account-selection-workflow", // Reference the workflow for client account selection
+  inputs: {
+    user_id: { value: TriggerContextData.Shortcut.user_id },
+    client_account_id: { value: TriggerContextData.Shortcut.channel_id }, // Again, use the correct value from user input
+  },
+};
 
 export default fbManagerTrigger;

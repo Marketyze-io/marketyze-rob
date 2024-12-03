@@ -31,15 +31,54 @@ let _ad_account_id: string;
 let _ad_account_name: string;
 let _spreadsheet_id: string;
 
-const express = require('express');
-const bodyParser = require('body-parser');
-const app = express();
-const port = process.env.PORT || 3000;
+import { serve } from "https://deno.land/std/http/server.ts";
+import { parse } from "https://deno.land/std/encoding/urlencoded.ts";
 
-app.use(bodyParser.urlencoded({ extended: true })); // For parsing form data
+// Example in-memory session store (for development, use a DB in production)
+const sessionStore: Record<string, any> = {};
 
-// Example in-memory session store (replace with DB in production)
-const sessionStore = {};
+// Handle HTTP request
+const handler = async (req: Request): Promise<Response> => {
+  const url = new URL(req.url);
+  const path = url.pathname;
+
+  // Example: Handling form POST requests (simulating body-parser)
+  if (req.method === "POST" && path === "/submit") {
+    const formData = await parse(req.body);
+    const { userId, userData } = formData;
+
+    // Store the session
+    sessionStore[userId] = userData;
+
+    // Return a response
+    return new Response(`Session data saved for user: ${userId}`, {
+      status: 200,
+    });
+  }
+
+  // Simple GET endpoint to view session data
+  if (path === "/session" && req.method === "GET") {
+    const userId = url.searchParams.get("userId");
+    if (userId && sessionStore[userId]) {
+      return new Response(
+        `Session data for ${userId}: ${JSON.stringify(sessionStore[userId])}`,
+        {
+          status: 200,
+        },
+      );
+    }
+
+    return new Response("No session data found.", { status: 404 });
+  }
+
+  // Fallback for other paths
+  return new Response("Not Found", { status: 404 });
+};
+
+// Start the server
+const port = 3000;
+console.log(`Server is running at http://localhost:${port}`);
+await serve(handler, { port });
 
 // Function to truncate strings if they are longer than 24 chars
 function truncateTitle(title: string) {
@@ -758,8 +797,6 @@ const onboarding_failed_view = {
   ],
 };
 
-
-
 // Store the access token in the session (to be replaced with DB in production)
 function storeAccessTokenInSession(userId, accessToken) {
   sessionStore[userId] = { accessToken };
@@ -784,10 +821,10 @@ function getClientAccountSelection(userId) {
 }
 
 // Facebook OAuth callback
-app.get('/auth/facebook/callback', async (req, res) => {
+app.get("/auth/facebook/callback", async (req, res) => {
   const { code } = req.query;
   if (!code) {
-    return res.status(400).send('Missing code from Facebook OAuth');
+    return res.status(400).send("Missing code from Facebook OAuth");
   }
 
   try {
@@ -798,22 +835,24 @@ app.get('/auth/facebook/callback', async (req, res) => {
     storeAccessTokenInSession(req.query.state, accessToken); // Store the access token with user ID (e.g., req.query.state)
 
     // Redirect to the next step (e.g., show client selection)
-    res.redirect('/select-client'); 
+    res.redirect("/select-client");
   } catch (error) {
-    res.status(500).send('Error during authentication: ' + error.message);
+    res.status(500).send("Error during authentication: " + error.message);
   }
 });
 
 async function exchangeCodeForAccessToken(code) {
-  const response = await fetch(`https://graph.facebook.com/v14.0/oauth/access_token?client_id=${process.env.FB_APP_ID}&redirect_uri=${process.env.FB_REDIRECT_URI}&client_secret=${process.env.FB_APP_SECRET}&code=${code}`);
+  const response = await fetch(
+    `https://graph.facebook.com/v14.0/oauth/access_token?client_id=${process.env.FB_APP_ID}&redirect_uri=${process.env.FB_REDIRECT_URI}&client_secret=${process.env.FB_APP_SECRET}&code=${code}`,
+  );
   const data = await response.json();
   return data.access_token;
 }
 
-
 // Fetch ads for the selected Facebook client account
 async function fetchFacebookAds(accessToken, clientAccountId) {
-  const url = `https://graph.facebook.com/v14.0/${clientAccountId}/ads?access_token=${accessToken}`;
+  const url =
+    `https://graph.facebook.com/v14.0/${clientAccountId}/ads?access_token=${accessToken}`;
   const response = await fetch(url);
   const data = await response.json();
   if (data.error) {
@@ -828,18 +867,22 @@ async function duplicateAdsForClientAccount(clientAccountId, userId) {
   const ads = await fetchFacebookAds(accessToken, clientAccountId);
 
   if (ads.length === 0) {
-    return console.log('No ads to duplicate.');
+    return console.log("No ads to duplicate.");
   }
 
   for (const ad of ads) {
-    const duplicatedAd = await createFacebookAd(accessToken, clientAccountId, ad);
+    const duplicatedAd = await createFacebookAd(
+      accessToken,
+      clientAccountId,
+      ad,
+    );
     if (duplicatedAd) {
       console.log(`Successfully duplicated ad: ${duplicatedAd.id}`);
     }
   }
 
   // Notify the user that the ads have been duplicated
-  notifySlackUser(userId, 'Ads have been duplicated successfully!');
+  notifySlackUser(userId, "Ads have been duplicated successfully!");
 }
 
 // Notify the user in Slack
@@ -850,14 +893,15 @@ async function notifySlackUser(userId, message) {
       text: message, // Your message content
     });
   } catch (error) {
-    console.error('Error sending Slack message:', error);
+    console.error("Error sending Slack message:", error);
   }
 }
 
 // Create a duplicate of an ad
 async function createFacebookAd(accessToken, clientAccountId, originalAd) {
-  const url = `https://graph.facebook.com/v14.0/${clientAccountId}/ads?access_token=${accessToken}`;
-  
+  const url =
+    `https://graph.facebook.com/v14.0/${clientAccountId}/ads?access_token=${accessToken}`;
+
   const adPayload = {
     name: `Duplicate of ${originalAd.name}`,
     status: originalAd.status,
@@ -866,16 +910,16 @@ async function createFacebookAd(accessToken, clientAccountId, originalAd) {
   };
 
   const response = await fetch(url, {
-    method: 'POST',
+    method: "POST",
     body: JSON.stringify(adPayload),
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
   });
 
   const data = await response.json();
   if (data.error) {
-    console.error('Error duplicating ad:', data.error.message);
+    console.error("Error duplicating ad:", data.error.message);
     return null;
   }
 
@@ -885,9 +929,6 @@ async function createFacebookAd(accessToken, clientAccountId, originalAd) {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
-
-
 
 // Function Definition
 export const FbManagerStartModalFunction = DefineFunction({
