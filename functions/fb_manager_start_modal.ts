@@ -1,4 +1,5 @@
 import { DefineFunction, Schema, SlackFunction } from "deno-slack-sdk/mod.ts";
+// import { Response } from "deno-slack-sdk/mod.ts";
 
 // Interface representing the options for the static select
 interface dropdownOption {
@@ -25,60 +26,16 @@ const MASTER_SHEET_ID = "1am9nNSWcUYpbvHFA8nk0GAvzedYvyBGTqNNT9YAX0wM";
 
 let fb_name = "";
 let fb_id = "";
+let originalAdId: string;
 let externalTokenFb: string | undefined = "";
 let externalTokenGs: string | undefined = "";
 let _ad_account_id: string;
 let _ad_account_name: string;
 let _spreadsheet_id: string;
 
-import { serve } from "https://deno.land/std/http/server.ts";
-import { parse } from "https://deno.land/std/encoding/urlencoded.ts";
-
 // Example in-memory session store (for development, use a DB in production)
-const sessionStore: Record<string, any> = {};
-
-// Handle HTTP request
-const handler = async (req: Request): Promise<Response> => {
-  const url = new URL(req.url);
-  const path = url.pathname;
-
-  // Example: Handling form POST requests (simulating body-parser)
-  if (req.method === "POST" && path === "/submit") {
-    const formData = await parse(req.body);
-    const { userId, userData } = formData;
-
-    // Store the session
-    sessionStore[userId] = userData;
-
-    // Return a response
-    return new Response(`Session data saved for user: ${userId}`, {
-      status: 200,
-    });
-  }
-
-  // Simple GET endpoint to view session data
-  if (path === "/session" && req.method === "GET") {
-    const userId = url.searchParams.get("userId");
-    if (userId && sessionStore[userId]) {
-      return new Response(
-        `Session data for ${userId}: ${JSON.stringify(sessionStore[userId])}`,
-        {
-          status: 200,
-        },
-      );
-    }
-
-    return new Response("No session data found.", { status: 404 });
-  }
-
-  // Fallback for other paths
-  return new Response("Not Found", { status: 404 });
-};
-
-// Start the server
-const port = 3000;
-console.log(`Server is running at http://localhost:${port}`);
-await serve(handler, { port });
+// const sessionStore: Record<string, any> = {};
+const sessionStore: { [key: string]: { accessToken: string } } = {}; // Temporary in-memory store
 
 // Function to truncate strings if they are longer than 24 chars
 function truncateTitle(title: string) {
@@ -754,6 +711,45 @@ function prepare_adcarousels_failed_view(ad_account_name: string) {
   };
 }
 
+function duplicate_ad_failed_view(adAccountName: string) {
+  return {
+    type: "modal",
+    title: {
+      type: "plain_text",
+      text: "Ad Duplication Failed",
+    },
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text:
+            `Failed to duplicate the ad for account: ${adAccountName}. Please try again later.`,
+        },
+      },
+    ],
+  };
+}
+
+function duplicate_ad_success_view(adAccountName: string) {
+  return {
+    type: "modal",
+    title: {
+      type: "plain_text",
+      text: "Ad Duplication Successful",
+    },
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `Successfully duplicated the ad for account: ${adAccountName}.`,
+        },
+      },
+    ],
+  };
+}
+
 const onboarding_loading_view = {
   "type": "modal",
   "callback_id": "onboarding-loading",
@@ -797,60 +793,38 @@ const onboarding_failed_view = {
   ],
 };
 
-// Store the access token in the session (to be replaced with DB in production)
-function storeAccessTokenInSession(userId, accessToken) {
-  sessionStore[userId] = { accessToken };
-}
-
-// Retrieve the access token from the session
-function getAccessTokenFromSession(userId) {
-  return sessionStore[userId]?.accessToken; // Return undefined if not found
-}
-
-// Store the selected client account in the session
-function storeClientAccountSelection(userId, selectedClientAccountId) {
-  if (!sessionStore[userId]) {
-    sessionStore[userId] = {};
-  }
-  sessionStore[userId].selectedClientAccountId = selectedClientAccountId;
-}
-
-// Retrieve the selected client account from the session
-function getClientAccountSelection(userId) {
-  return sessionStore[userId]?.selectedClientAccountId;
-}
-
-// Facebook OAuth callback
-app.get("/auth/facebook/callback", async (req, res) => {
-  const { code } = req.query;
-  if (!code) {
-    return res.status(400).send("Missing code from Facebook OAuth");
-  }
-
-  try {
-    // Exchange the code for an access token
-    const accessToken = await exchangeCodeForAccessToken(code);
-
-    // Store the access token for the user
-    storeAccessTokenInSession(req.query.state, accessToken); // Store the access token with user ID (e.g., req.query.state)
-
-    // Redirect to the next step (e.g., show client selection)
-    res.redirect("/select-client");
-  } catch (error) {
-    res.status(500).send("Error during authentication: " + error.message);
-  }
-});
-
-async function exchangeCodeForAccessToken(code) {
+// Exchange code for an access token (using fetch in Deno)
+export async function exchangeCodeForAccessToken(code: string) {
   const response = await fetch(
-    `https://graph.facebook.com/v14.0/oauth/access_token?client_id=${process.env.FB_APP_ID}&redirect_uri=${process.env.FB_REDIRECT_URI}&client_secret=${process.env.FB_APP_SECRET}&code=${code}`,
+    `https://graph.facebook.com/v14.0/oauth/access_token?client_id=${
+      Deno.env.get("FB_APP_ID")
+    }&redirect_uri=${Deno.env.get("FB_REDIRECT_URI")}&client_secret=${
+      Deno.env.get("FB_APP_SECRET")
+    }&code=${code}`,
   );
   const data = await response.json();
+  if (data.error) {
+    throw new Error(`Error fetching access token: ${data.error.message}`);
+  }
   return data.access_token;
 }
 
-// Fetch ads for the selected Facebook client account
-async function fetchFacebookAds(accessToken, clientAccountId) {
+// Store the access token (adjusting session storage)
+export function storeAccessToken(userId: string, accessToken: string) {
+  // In Deno, you can use in-memory storage or a database for long-term storage
+  // Example: store in memory
+  sessionStore[userId] = { accessToken };
+}
+
+// Fetch the access token (from sessionStore or database)
+export function getAccessToken(userId: string) {
+  return sessionStore[userId]?.accessToken; // Return undefined if not found
+}
+
+export async function fetchFacebookAds(
+  accessToken: string,
+  clientAccountId: string,
+) {
   const url =
     `https://graph.facebook.com/v14.0/${clientAccountId}/ads?access_token=${accessToken}`;
   const response = await fetch(url);
@@ -861,74 +835,32 @@ async function fetchFacebookAds(accessToken, clientAccountId) {
   return data.data;
 }
 
-// Duplicate ads for the selected client account
-async function duplicateAdsForClientAccount(clientAccountId, userId) {
-  const accessToken = getAccessTokenFromSession(userId); // Retrieve the user's access token
-  const ads = await fetchFacebookAds(accessToken, clientAccountId);
-
-  if (ads.length === 0) {
-    return console.log("No ads to duplicate.");
-  }
-
-  for (const ad of ads) {
-    const duplicatedAd = await createFacebookAd(
-      accessToken,
-      clientAccountId,
-      ad,
-    );
-    if (duplicatedAd) {
-      console.log(`Successfully duplicated ad: ${duplicatedAd.id}`);
-    }
-  }
-
-  // Notify the user that the ads have been duplicated
-  notifySlackUser(userId, "Ads have been duplicated successfully!");
-}
-
-// Notify the user in Slack
-async function notifySlackUser(userId, message) {
+// Function to send a modal to a user (this is similar to your existing view structure)
+export async function sendSlackModal(userId: string, modalView: object) {
   try {
-    await app.client.chat.postMessage({
-      channel: userId, // Send the message to the user's Slack DM
-      text: message, // Your message content
+    const response = await fetch("https://slack.com/api/views.open", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SLACK_BOT_TOKEN")}`, // Bot token for authentication
+      },
+      body: JSON.stringify({
+        trigger_id: userId, // You'll need a trigger ID to open the modal
+        view: modalView,
+      }),
     });
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      throw new Error(`Error opening modal: ${data.error}`);
+    }
+
+    console.log("Modal sent successfully!");
   } catch (error) {
-    console.error("Error sending Slack message:", error);
+    console.error("Error sending modal:", error);
   }
 }
-
-// Create a duplicate of an ad
-async function createFacebookAd(accessToken, clientAccountId, originalAd) {
-  const url =
-    `https://graph.facebook.com/v14.0/${clientAccountId}/ads?access_token=${accessToken}`;
-
-  const adPayload = {
-    name: `Duplicate of ${originalAd.name}`,
-    status: originalAd.status,
-    creative: originalAd.creative,
-    adset_id: originalAd.adset_id,
-  };
-
-  const response = await fetch(url, {
-    method: "POST",
-    body: JSON.stringify(adPayload),
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  const data = await response.json();
-  if (data.error) {
-    console.error("Error duplicating ad:", data.error.message);
-    return null;
-  }
-
-  return data; // Return the duplicated ad object
-}
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
 
 // Function Definition
 export const FbManagerStartModalFunction = DefineFunction({
@@ -1319,6 +1251,61 @@ export default SlackFunction(
         const error = `Failed to update a modal due to ${response.error}`;
         return { error };
       }
+      return {
+        completed: false,
+      };
+    },
+  )
+  .addBlockActionsHandler(
+    "button-duplicate-fb-ad",
+    async ({ inputs, body, client }) => {
+      // const { originalAd, adAccountId, accessToken, _ad_account_name } = inputs; // Ensure 'originalAd' is passed properly
+
+      if (!originalAdId) {
+        return { error: "Original ad is missing or incomplete." };
+      }
+
+      const payload = {
+        channel_id: inputs.channel_id,
+        ad_account_id: _ad_account_id,
+        fb_access_token: externalTokenFb,
+        ad_id: originalAdId, // The ID of the ad to be duplicated
+      };
+
+      const duplicate_ad_response = await fetch(
+        `${AWS_ROOT_URL}/${AWS_API_STAGE}/duplicate-ad`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (duplicate_ad_response.status !== 200) {
+        const error =
+          `Failed to duplicate the ad (status: ${duplicate_ad_response.status})`;
+        console.log(error);
+        const response = await client.views.push({
+          interactivity_pointer: body.interactivity.interactivity_pointer,
+          view_id: body.view.id,
+          view: duplicate_ad_failed_view(_ad_account_name),
+        });
+        if (response.error) {
+          return { error: `Failed to update the modal: ${response.error}` };
+        }
+      }
+
+      const response = await client.views.push({
+        interactivity_pointer: body.interactivity.interactivity_pointer,
+        view_id: body.view.id,
+        view: duplicate_ad_success_view(_ad_account_name),
+      });
+      if (response.error) {
+        return { error: `Failed to update the modal: ${response.error}` };
+      }
+
       return {
         completed: false,
       };
