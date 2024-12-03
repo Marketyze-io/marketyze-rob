@@ -2,79 +2,86 @@ import { Trigger } from "deno-slack-sdk/types.ts";
 import fbManagerWorkflow from "../workflows/fb_manager_workflow.ts";
 import { TriggerContextData, TriggerTypes } from "deno-slack-api/mod.ts";
 
+// Shortcut trigger that starts the workflow
 const fbManagerTrigger: Trigger<typeof fbManagerWorkflow.definition> = {
-  type: TriggerTypes.Shortcut,
-  name: "Open FB Marketing Manager",
-  workflow: `#/workflows/${fbManagerWorkflow.definition.callback_id}`,
+  type: TriggerTypes.Shortcut, // Shortcut trigger type
+  name: "Open FB Marketing Manager", // The name of the shortcut
+  workflow: `#/workflows/${fbManagerWorkflow.definition.callback_id}`, // Point to the workflow
   inputs: {
-    user_id: {
-      value: TriggerContextData.Shortcut.user_id,
-    },
-    channel_id: {
-      value: TriggerContextData.Shortcut.channel_id,
-    },
-    interactivity: {
-      value: TriggerContextData.Shortcut.interactivity,
-    },
+    user_id: { value: TriggerContextData.Shortcut.user_id },
+    channel_id: { value: TriggerContextData.Shortcut.channel_id },
+    interactivity: { value: TriggerContextData.Shortcut.interactivity },
   },
 };
 
 // Handle slash command request
-app.command('/duplicate_ads', async ({ command, ack, respond }) => {
-  await ack(); // Acknowledge the command
+app.action("duplicate_ads", async ({ body, ack, respond }) => {
+  await ack();
 
-  // Send a message with a button that the user can click to start the login process
+  const userId = body.user.id;
+  const clientAccountId = body.actions[0].selected_option.value;
+
+  // Trigger a workflow for duplicating ads
+  await app.client.workflows.start({
+    trigger_id: body.trigger_id,
+    workflow: "duplicate-ads-workflow", // Reference the appropriate workflow
+    inputs: {
+      user_id: userId,
+      client_account_id: clientAccountId,
+    },
+  });
+
+  // Respond to the user to confirm the action
   await respond({
-    text: 'To duplicate ads on Facebook, please click the button below to log in:',
-    attachments: [
-      {
-        text: 'Click the button to start the process.',
-        fallback: 'You are unable to login',
-        callback_id: 'login_button_click',
-        actions: [
-          {
-            type: 'button',
-            text: 'Login with Facebook',
-            action_id: 'login_button_click', // Identifies the action when the button is clicked
-            style: 'primary',
-            url: 'https://www.facebook.com/v14.0/dialog/oauth?client_id=YOUR_FB_APP_ID&redirect_uri=YOUR_REDIRECT_URI&scope=ads_management',
-          },
-        ],
-      },
-    ],
+    text:
+      `Starting the ad duplication process for client account: ${clientAccountId}.`,
   });
 });
 
-app.action('login_button_click', async ({ body, ack, respond }) => {
-  await ack();  // Acknowledge the interaction immediately
+// Handle button interaction (login_button_click)
+app.action("login_button_click", async ({ body, ack, respond }) => {
+  await ack(); // Acknowledge the action immediately
 
-  // Redirect the user to the Facebook OAuth login page
-  const authUrl = `https://www.facebook.com/v14.0/dialog/oauth?client_id=${process.env.FB_APP_ID}&redirect_uri=${process.env.FB_REDIRECT_URI}&scope=ads_management`;
-  
-  // Respond with a message containing the Facebook login URL
+  // You can use `app.client.workflows.start` to trigger a workflow
+  await app.client.workflows.start({
+    trigger_id: body.trigger_id, // Pass the trigger_id from the interaction
+    workflow: "fb-manager-workflow", // Specify the workflow callback_id
+    inputs: {
+      user_id: body.user.id, // User who clicked the button
+      channel_id: body.channel.id, // Channel where the interaction took place
+      interactivity: true, // Flag if interaction is needed
+      fbAccessTokenId: body.user.id, // Facebook access token
+    },
+  });
+
+  // Respond with a message or feedback
   await respond({
-    text: `Please log in to your Facebook account: <${authUrl}|Login to Facebook>`,
+    text: "Starting the Facebook Manager workflow...",
   });
 });
 
-app.action('client_account_select', async ({ body, ack, respond }) => {
-  await ack();  // Acknowledge the action
+// Handle client account selection
+app.action("client_account_select", async ({ body, ack, respond }) => {
+  await ack(); // Acknowledge the interaction
 
-  const selectedClientAccountId = body.actions[0].selected_option.value; // Get selected client account ID
-  const userId = body.user.id; // Get the user's Slack ID
+  const selectedClientAccountId = body.actions[0].selected_option.value;
+  const userId = body.user.id;
 
-  // Store the selected client account ID in your session
-  storeClientAccountSelection(userId, selectedClientAccountId);
-
-  // Respond with a message or start the next part of the flow (duplicating ads)
-  await respond({
-    text: 'You selected the client account. Now, we will begin duplicating ads.',
+  // Trigger a workflow for handling the selected client account
+  await app.client.workflows.start({
+    trigger_id: body.trigger_id,
+    workflow: "client-account-selection-workflow", // Reference the workflow
+    inputs: {
+      user_id: userId,
+      client_account_id: selectedClientAccountId,
+    },
   });
 
-  // Call the function to start duplicating ads
-  await duplicateAdsForClientAccount(selectedClientAccountId, userId);
+  // Respond with confirmation
+  await respond({
+    text:
+      `Selected client account: ${selectedClientAccountId}. Processing your request.`,
+  });
 });
-
-
 
 export default fbManagerTrigger;
