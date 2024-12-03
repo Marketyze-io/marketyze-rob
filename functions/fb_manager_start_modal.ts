@@ -31,6 +31,16 @@ let _ad_account_id: string;
 let _ad_account_name: string;
 let _spreadsheet_id: string;
 
+const express = require('express');
+const bodyParser = require('body-parser');
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.use(bodyParser.urlencoded({ extended: true })); // For parsing form data
+
+// Example in-memory session store (replace with DB in production)
+const sessionStore = {};
+
 // Function to truncate strings if they are longer than 24 chars
 function truncateTitle(title: string) {
   if (title.length > 24) {
@@ -748,46 +758,135 @@ const onboarding_failed_view = {
   ],
 };
 
-const express = require('express');
-const bodyParser = require('body-parser');
-const app = express();
-const port = process.env.PORT || 3000;
 
-app.use(bodyParser.urlencoded({ extended: true })); // For parsing form data
 
-// Handle slash command request
-app.post('/duplicate_ads', (req, res) => {
-  const { text, user_id, channel_id } = req.body;
+// Store the access token in the session (to be replaced with DB in production)
+function storeAccessTokenInSession(userId, accessToken) {
+  sessionStore[userId] = { accessToken };
+}
 
-  console.log(`Received slash command from ${user_id} in channel ${channel_id}`);
-  console.log(`Command text: ${text}`);
+// Retrieve the access token from the session
+function getAccessTokenFromSession(userId) {
+  return sessionStore[userId]?.accessToken; // Return undefined if not found
+}
 
-  // You can now process the slash command and send a response
-  res.send({
-    response_type: 'ephemeral',  // Sends the response only to the user who invoked the command
-    text: 'To duplicate ads, please click the button below to log in with Facebook!',
-    attachments: [
-      {
-        text: 'Click the button to start the process.',
-        fallback: 'You are unable to login',
-        callback_id: 'login_button_click',
-        actions: [
-          {
-            type: 'button',
-            text: 'Login with Facebook',
-            action_id: 'login_button_click',
-            style: 'primary',
-            url: 'https://www.facebook.com/v14.0/dialog/oauth?client_id=YOUR_FB_APP_ID&redirect_uri=YOUR_REDIRECT_URI&scope=ads_management',
-          },
-        ],
-      },
-    ],
-  });
+// Store the selected client account in the session
+function storeClientAccountSelection(userId, selectedClientAccountId) {
+  if (!sessionStore[userId]) {
+    sessionStore[userId] = {};
+  }
+  sessionStore[userId].selectedClientAccountId = selectedClientAccountId;
+}
+
+// Retrieve the selected client account from the session
+function getClientAccountSelection(userId) {
+  return sessionStore[userId]?.selectedClientAccountId;
+}
+
+// Facebook OAuth callback
+app.get('/auth/facebook/callback', async (req, res) => {
+  const { code } = req.query;
+  if (!code) {
+    return res.status(400).send('Missing code from Facebook OAuth');
+  }
+
+  try {
+    // Exchange the code for an access token
+    const accessToken = await exchangeCodeForAccessToken(code);
+
+    // Store the access token for the user
+    storeAccessTokenInSession(req.query.state, accessToken); // Store the access token with user ID (e.g., req.query.state)
+
+    // Redirect to the next step (e.g., show client selection)
+    res.redirect('/select-client'); 
+  } catch (error) {
+    res.status(500).send('Error during authentication: ' + error.message);
+  }
 });
+
+async function exchangeCodeForAccessToken(code) {
+  const response = await fetch(`https://graph.facebook.com/v14.0/oauth/access_token?client_id=${process.env.FB_APP_ID}&redirect_uri=${process.env.FB_REDIRECT_URI}&client_secret=${process.env.FB_APP_SECRET}&code=${code}`);
+  const data = await response.json();
+  return data.access_token;
+}
+
+
+// Fetch ads for the selected Facebook client account
+async function fetchFacebookAds(accessToken, clientAccountId) {
+  const url = `https://graph.facebook.com/v14.0/${clientAccountId}/ads?access_token=${accessToken}`;
+  const response = await fetch(url);
+  const data = await response.json();
+  if (data.error) {
+    throw new Error(data.error.message);
+  }
+  return data.data;
+}
+
+// Duplicate ads for the selected client account
+async function duplicateAdsForClientAccount(clientAccountId, userId) {
+  const accessToken = getAccessTokenFromSession(userId); // Retrieve the user's access token
+  const ads = await fetchFacebookAds(accessToken, clientAccountId);
+
+  if (ads.length === 0) {
+    return console.log('No ads to duplicate.');
+  }
+
+  for (const ad of ads) {
+    const duplicatedAd = await createFacebookAd(accessToken, clientAccountId, ad);
+    if (duplicatedAd) {
+      console.log(`Successfully duplicated ad: ${duplicatedAd.id}`);
+    }
+  }
+
+  // Notify the user that the ads have been duplicated
+  notifySlackUser(userId, 'Ads have been duplicated successfully!');
+}
+
+// Notify the user in Slack
+async function notifySlackUser(userId, message) {
+  try {
+    await app.client.chat.postMessage({
+      channel: userId, // Send the message to the user's Slack DM
+      text: message, // Your message content
+    });
+  } catch (error) {
+    console.error('Error sending Slack message:', error);
+  }
+}
+
+// Create a duplicate of an ad
+async function createFacebookAd(accessToken, clientAccountId, originalAd) {
+  const url = `https://graph.facebook.com/v14.0/${clientAccountId}/ads?access_token=${accessToken}`;
+  
+  const adPayload = {
+    name: `Duplicate of ${originalAd.name}`,
+    status: originalAd.status,
+    creative: originalAd.creative,
+    adset_id: originalAd.adset_id,
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    body: JSON.stringify(adPayload),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const data = await response.json();
+  if (data.error) {
+    console.error('Error duplicating ad:', data.error.message);
+    return null;
+  }
+
+  return data; // Return the duplicated ad object
+}
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
+
 
 
 // Function Definition
