@@ -1,5 +1,5 @@
 import { DefineWorkflow, Schema } from "deno-slack-sdk/mod.ts";
-//import { DuplicateAdFunction } from "../functions/fb_manager_start_modal.ts"; // Import your new function for duplication
+import { DuplicateAdFunction } from "../functions/duplicate_ads_functions.ts"; // Import your new function for duplication
 
 // Define the new ads duplication workflow
 const duplicateAdWorkflow = DefineWorkflow({
@@ -19,17 +19,17 @@ const duplicateAdWorkflow = DefineWorkflow({
         type: Schema.types.string,
       },
     },
-    required: ["user_id", "channel_id", "interactivity", "ad_id"], // Required inputs
+    required: ["user_id", "channel_id", "interactivity"], // Required inputs
   },
 });
 
 // Add the step to duplicate the ad
 duplicateAdWorkflow.addStep(DuplicateAdFunction, {
-  user_id: duplicateAdWorkflow.inputs.user_id,
-  channel_id: duplicateAdWorkflow.inputs.channel_id,
-  interactivity: duplicateAdWorkflow.inputs.interactivity,
-  fbAccessTokenId: { credential_source: "END_USER" }, // Pull the access token from the user session
-  ad_id: duplicateAdWorkflow.inputs.ad_id, // Ad ID passed from the user
+  user_id: duplicateAdWorkflow.inputs.user_id, // Ensure the user_id is passed
+  channel_id: duplicateAdWorkflow.inputs.channel_id, // Ensure the channel_id is passed
+  interactivity: duplicateAdWorkflow.inputs.interactivity, // Pass interactivity flag
+  fbAccessTokenId: { credential_source: "END_USER" }, // Use the access token from user session
+  ad_id: duplicateAdWorkflow.inputs.ad_id, // Pass the ad_id from workflow inputs
 });
 
 export default duplicateAdWorkflow;

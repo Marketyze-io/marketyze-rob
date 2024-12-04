@@ -168,6 +168,9 @@ export const DuplicateAdFunction = DefineFunction({
         type: Schema.slack.types.oauth2,
         oauth2_provider_key: "marketyze-login-google-sheets",
       },
+      ad_id: { // Facebook Ad ID to be duplicated
+        type: Schema.types.string,
+      },
     },
     required: ["user_id", "channel_id", "interactivity"],
   },
