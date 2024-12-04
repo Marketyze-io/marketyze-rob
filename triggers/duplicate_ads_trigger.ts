@@ -1,7 +1,7 @@
 import { Trigger } from "deno-slack-sdk/types.ts";
 import { TriggerContextData, TriggerTypes } from "deno-slack-api/mod.ts";
-import duplicateAdWorkflow from "../workflows/duplicate_ads_workflow.ts";
 // import fbManagerDevWorkflow from "../workflows/fb_manager_dev_workflow.ts";
+import duplicateAdWorkflow from "../workflows/duplicate_ad_workflow.ts";
 import fbManagerWorkflow from "../workflows/fb_manager_workflow.ts";
 import clientAccountSelectWorkflow from "../workflows/client_account_selection_workflow.ts";
 
