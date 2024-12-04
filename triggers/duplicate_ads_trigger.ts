@@ -1,37 +1,51 @@
 import { Trigger } from "deno-slack-sdk/types.ts";
 import { TriggerContextData, TriggerTypes } from "deno-slack-api/mod.ts";
+import duplicateAdWorkflow from "../workflows/duplicate_ads_workflow.ts";
+// import fbManagerDevWorkflow from "../workflows/fb_manager_dev_workflow.ts";
+import fbManagerWorkflow from "../workflows/fb_manager_workflow.ts";
 
 // Handle button interaction (duplicate_ads)
-export const duplicateAdsTrigger: Trigger = {
-  type: TriggerTypes.Shortcut, // Action trigger type
+// Handle button interaction (duplicate_ads)
+const duplicateAdsTrigger: Trigger<typeof duplicateAdWorkflow.definition> = {
+  type: TriggerTypes.Shortcut, // Action trigger type (e.g., shortcut)
   name: "duplicate_ads", // Name of the action
-  workflow: "#/workflows/duplicate-ads-workflow", // Reference the workflow
+  workflow: `#/workflows/${duplicateAdWorkflow.definition.callback_id}`, // Reference the workflow using callback_id
   inputs: {
     user_id: { value: TriggerContextData.Shortcut.user_id }, // Extract user_id from context
-    client_account_id: { value: TriggerContextData.Shortcut.interactivity }, // Adjust to where client_account_id comes from
+    channel_id: { value: TriggerContextData.Shortcut.channel_id }, // Extract channel_id from context
+    interactivity: { value: TriggerContextData.Shortcut.interactivity }, // Extract interactivity from context
+    ad_id: { value: TriggerContextData.Shortcut.interactivity }, // Ensure this matches what the workflow needs
   },
 };
 
 // Handle button interaction (login_button_click)
-export const loginButtonClickTrigger: Trigger = {
+const loginButtonClickTrigger: Trigger<typeof fbManagerWorkflow.definition> = {
   type: TriggerTypes.Shortcut, // Trigger type for button click
   name: "login_button_click", // Name of the action
-  workflow: "#/workflows/fb-manager-workflow", // Reference to the Facebook manager workflow
+  workflow: `#/workflows/${fbManagerWorkflow.definition.callback_id}`, // Reference to the Facebook manager workflow
   inputs: {
-    user_id: { value: TriggerContextData.Shortcut.user_id }, // Get user ID from context
-    channel_id: { value: TriggerContextData.Shortcut.channel_id }, // Get channel ID
-    interactivity: { value: TriggerContextData.Shortcut.interactivity }, // Get action ID from interaction
-    fbAccessTokenId: { value: "fb-access-token" }, // Example: replace with the actual OAuth token
+    user_id: { value: TriggerContextData.Shortcut.user_id },
+    channel_id: { value: TriggerContextData.Shortcut.channel_id },
+    interactivity: { value: TriggerContextData.Shortcut.interactivity },
+    fbAccessTokenId: { value: "fb-access-token" }, // OAuth token (ensure this is valid)
   },
 };
 
 // Handle client account selection
-export const clientAccountSelectTrigger: Trigger = {
+const clientAccountSelectTrigger: Trigger<
+  typeof clientAccountSelectWorkflow.definition
+> = {
   type: TriggerTypes.Shortcut, // Action trigger type
   name: "client_account_select", // Name of the action
-  workflow: "#/workflows/client-account-selection-workflow", // Reference the client account selection workflow
+  workflow: `#/workflows/${clientAccountSelectWorkflow.definition.callback_id}`, // Reference the client account selection workflow
   inputs: {
     user_id: { value: TriggerContextData.Shortcut.user_id }, // Extract user_id from context
     client_account_id: { value: TriggerContextData.Shortcut.interactivity }, // Use the selected value from the dropdown or interaction
   },
+};
+
+export {
+  clientAccountSelectTrigger,
+  duplicateAdsTrigger,
+  loginButtonClickTrigger,
 };
