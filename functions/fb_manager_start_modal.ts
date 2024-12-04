@@ -26,16 +26,12 @@ const MASTER_SHEET_ID = "1am9nNSWcUYpbvHFA8nk0GAvzedYvyBGTqNNT9YAX0wM";
 
 let fb_name = "";
 let fb_id = "";
-let originalAdId: string;
+// let originalAdId: string;
 let externalTokenFb: string | undefined = "";
 let externalTokenGs: string | undefined = "";
 let _ad_account_id: string;
 let _ad_account_name: string;
 let _spreadsheet_id: string;
-
-// Example in-memory session store (for development, use a DB in production)
-// const sessionStore: Record<string, any> = {};
-const sessionStore: { [key: string]: { accessToken: string } } = {}; // Temporary in-memory store
 
 // Function to truncate strings if they are longer than 24 chars
 function truncateTitle(title: string) {
@@ -711,45 +707,6 @@ function prepare_adcarousels_failed_view(ad_account_name: string) {
   };
 }
 
-function duplicate_ad_failed_view(adAccountName: string) {
-  return {
-    type: "modal",
-    title: {
-      type: "plain_text",
-      text: "Ad Duplication Failed",
-    },
-    blocks: [
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text:
-            `Failed to duplicate the ad for account: ${adAccountName}. Please try again later.`,
-        },
-      },
-    ],
-  };
-}
-
-function duplicate_ad_success_view(adAccountName: string) {
-  return {
-    type: "modal",
-    title: {
-      type: "plain_text",
-      text: "Ad Duplication Successful",
-    },
-    blocks: [
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `Successfully duplicated the ad for account: ${adAccountName}.`,
-        },
-      },
-    ],
-  };
-}
-
 const onboarding_loading_view = {
   "type": "modal",
   "callback_id": "onboarding-loading",
@@ -792,75 +749,6 @@ const onboarding_failed_view = {
     },
   ],
 };
-
-// Exchange code for an access token (using fetch in Deno)
-export async function exchangeCodeForAccessToken(code: string) {
-  const response = await fetch(
-    `https://graph.facebook.com/v14.0/oauth/access_token?client_id=${
-      Deno.env.get("FB_APP_ID")
-    }&redirect_uri=${Deno.env.get("FB_REDIRECT_URI")}&client_secret=${
-      Deno.env.get("FB_APP_SECRET")
-    }&code=${code}`,
-  );
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(`Error fetching access token: ${data.error.message}`);
-  }
-  return data.access_token;
-}
-
-// Store the access token (adjusting session storage)
-export function storeAccessToken(userId: string, accessToken: string) {
-  // In Deno, you can use in-memory storage or a database for long-term storage
-  // Example: store in memory
-  sessionStore[userId] = { accessToken };
-}
-
-// Fetch the access token (from sessionStore or database)
-export function getAccessToken(userId: string) {
-  return sessionStore[userId]?.accessToken; // Return undefined if not found
-}
-
-export async function fetchFacebookAds(
-  accessToken: string,
-  clientAccountId: string,
-) {
-  const url =
-    `https://graph.facebook.com/v14.0/${clientAccountId}/ads?access_token=${accessToken}`;
-  const response = await fetch(url);
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(data.error.message);
-  }
-  return data.data;
-}
-
-// Function to send a modal to a user (this is similar to your existing view structure)
-export async function sendSlackModal(userId: string, modalView: object) {
-  try {
-    const response = await fetch("https://slack.com/api/views.open", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${Deno.env.get("SLACK_BOT_TOKEN")}`, // Bot token for authentication
-      },
-      body: JSON.stringify({
-        trigger_id: userId, // You'll need a trigger ID to open the modal
-        view: modalView,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!data.ok) {
-      throw new Error(`Error opening modal: ${data.error}`);
-    }
-
-    console.log("Modal sent successfully!");
-  } catch (error) {
-    console.error("Error sending modal:", error);
-  }
-}
 
 // Function Definition
 export const FbManagerStartModalFunction = DefineFunction({
@@ -1251,61 +1139,6 @@ export default SlackFunction(
         const error = `Failed to update a modal due to ${response.error}`;
         return { error };
       }
-      return {
-        completed: false,
-      };
-    },
-  )
-  .addBlockActionsHandler(
-    "button-duplicate-fb-ad",
-    async ({ inputs, body, client }) => {
-      // const { originalAd, adAccountId, accessToken, _ad_account_name } = inputs; // Ensure 'originalAd' is passed properly
-
-      if (!originalAdId) {
-        return { error: "Original ad is missing or incomplete." };
-      }
-
-      const payload = {
-        channel_id: inputs.channel_id,
-        ad_account_id: _ad_account_id,
-        fb_access_token: externalTokenFb,
-        ad_id: originalAdId, // The ID of the ad to be duplicated
-      };
-
-      const duplicate_ad_response = await fetch(
-        `${AWS_ROOT_URL}/${AWS_API_STAGE}/duplicate-ad`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      if (duplicate_ad_response.status !== 200) {
-        const error =
-          `Failed to duplicate the ad (status: ${duplicate_ad_response.status})`;
-        console.log(error);
-        const response = await client.views.push({
-          interactivity_pointer: body.interactivity.interactivity_pointer,
-          view_id: body.view.id,
-          view: duplicate_ad_failed_view(_ad_account_name),
-        });
-        if (response.error) {
-          return { error: `Failed to update the modal: ${response.error}` };
-        }
-      }
-
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: duplicate_ad_success_view(_ad_account_name),
-      });
-      if (response.error) {
-        return { error: `Failed to update the modal: ${response.error}` };
-      }
-
       return {
         completed: false,
       };
