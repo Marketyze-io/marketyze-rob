@@ -69,22 +69,23 @@ export function duplicateAdSuccessView(adAccountName: string): object {
   );
 }
 
-// Open the modal in your function
-await client.views.open({
-  trigger_id: inputs.interactivity.interactivity_pointer, // Use the interactivity pointer to open the modal
-  view: modalView,
-});
+// Function to open a modal
+async function openModal(client: any, trigger_id: string, view: object) {
+  try {
+    const response = await client.views.open({
+      trigger_id, // Trigger ID provided by Slack
+      view, // Modal view definition
+    });
 
-// Code for opening the modal (this could be part of a Slack function)
-await client.views.open({
-  trigger_id: trigger_id,
-  view: modalView,
-});
+    if (!response.ok) {
+      throw new Error(`Error opening modal: ${response.error}`);
+    }
 
-await client.views.open({
-  trigger_id: inputs.interactivity.interactivity_pointer,
-  view: clientAccountSelectModal,
-});
+    console.log("Modal opened successfully.");
+  } catch (error) {
+    console.error("Error in openModal:", error.message);
+  }
+}
 
 // Exchange code for an access token (using fetch in Deno)
 export async function exchangeCodeForAccessToken(code: string) {
@@ -168,306 +169,185 @@ export const OpenClientAccountModalFunction = DefineFunction({
     },
     required: ["user_id", "channel_id", "interactivity"],
   },
+  output_parameters: {
+    properties: {
+      ad_id: { type: Schema.types.string }, // The selected ad ID
+    },
+    required: ["ad_id"],
+  },
 });
 
-// Function Definition
+// Define the Slack function
 export const DuplicateAdFunction = DefineFunction({
-  callback_id: "fb-manager-start-modal",
-  title: "FB Manager Start Modal",
-  source_file: "functions/fb_manager_start_modal.ts",
+  callback_id: "duplicate-ad-function",
+  title: "Duplicate Facebook Ad",
+  source_file: "functions/duplicate_ad_function.ts",
   input_parameters: {
     properties: {
-      user_id: {
-        type: Schema.slack.types.user_id,
-      },
-      channel_id: {
-        type: Schema.slack.types.channel_id,
-      },
-      interactivity: {
-        type: Schema.slack.types.interactivity,
-      },
+      user_id: { type: Schema.slack.types.user_id },
+      channel_id: { type: Schema.slack.types.channel_id },
+      interactivity: { type: Schema.slack.types.interactivity },
       fbAccessTokenId: {
         type: Schema.slack.types.oauth2,
         oauth2_provider_key: "marketyze-login-fb",
       },
-      googleSheetsAccessTokenId: {
-        type: Schema.slack.types.oauth2,
-        oauth2_provider_key: "marketyze-login-google-sheets",
-      },
-      ad_id: { // Facebook Ad ID to be duplicated
-        type: Schema.types.string,
-      },
+      ad_id: { type: Schema.types.string },
     },
-    required: ["user_id", "channel_id", "interactivity"],
+    required: ["user_id", "channel_id", "interactivity", "ad_id"],
   },
-  output_parameters: { properties: {}, required: [] },
 });
 
-// functions/open_client_account_modal.ts
-// import { SlackFunction } from "deno-slack-sdk/mod.ts";
-import { clientAccountSelectModal } from "../modals/client_account_select_modal.ts";
-
-// export default SlackFunction(
-//   "open-client-account-modal",
-//   async ({ inputs, client }) => {
-//     const response = await client.views.open({
-//       trigger_id: inputs.interactivity.interactivity_pointer, // Use interactivity pointer
-//       view: clientAccountSelectModal, // Use the modal definition
-//     });
-
-//     if (response.error) {
-//       console.error(`Failed to open modal: ${response.error}`);
-//       return { error: "Failed to open client account modal." };
-//     }
-
-//     return { outputs: {} }; // Return outputs if needed
-//   },
-// );
-
 // Function Implementation
+// Implement the Slack function
 export default SlackFunction(
   DuplicateAdFunction,
   async ({ inputs, client }) => {
-    // Retrieve the Facebook external token
-    const tokenResponse = await client.apps.auth.external.get({
-      external_token_id: inputs.fbAccessTokenId,
-    });
+    try {
+      // Step 1: Retrieve Facebook access token
+      const fbTokenResponse = await client.apps.auth.external.get({
+        external_token_id: inputs.fbAccessTokenId,
+      });
 
-    // Handle the error if the token was not retrieved successfully
-    if (tokenResponse.error) {
-      const error =
-        `Failed to retrieve the external auth token due to ${tokenResponse.error}`;
-      return { error };
-    }
-    externalTokenFb = tokenResponse.external_token;
-
-    // Retrieve the Google Sheets external token
-    const gsTokenResponse = await client.apps.auth.external.get({
-      external_token_id: inputs.googleSheetsAccessTokenId,
-    });
-
-    // Handle the error if the token was not retrieved successfully
-    if (gsTokenResponse.error) {
-      const error =
-        `Failed to retrieve the external auth token due to ${gsTokenResponse.error}`;
-      return { error };
-    }
-    externalTokenGs = gsTokenResponse.external_token;
-
-    // Call the /me endpoint to retrieve the user's name
-    const me_response = await fetch("https://graph.facebook.com/me", {
-      headers: new Headers({
-        "Authorization": `Bearer ${externalTokenFb}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      }),
-    });
-
-    // Handle the error if the /me endpoint was not called successfully
-    if (me_response.status != 200) {
-      const body = await me_response.text();
-      const error =
-        `Failed to call my endpoint! (status: ${me_response.status}, body: ${body})`;
-      return { error };
-    }
-
-    // Format the response
-    const myApiResponse = await me_response.json();
-    console.log("/me: ", myApiResponse);
-    fb_name = myApiResponse.name;
-    fb_id = myApiResponse.id;
-
-    // Fetch ad accounts via API
-    const ad_accounts_response = await fetch(
-      `https://graph.facebook.com/v19.0/${fb_id}/adaccounts?fields=name`,
-      {
-        headers: new Headers({
-          "Authorization": `Bearer ${externalTokenFb}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        }),
-      },
-    );
-
-    // Handle the error if the /me endpoint was not called successfully
-    if (ad_accounts_response.status != 200) {
-      const body = await ad_accounts_response.text();
-      const error =
-        `Failed to call my endpoint! (status: ${ad_accounts_response.status}, body: ${body})`;
-      return { error };
-    }
-
-    // Format the response
-    const apiResponse = await ad_accounts_response.json();
-    console.log("Ad Accounts: ", apiResponse);
-    const adAccountData = apiResponse.data;
-
-    // Create options for the static select
-    const options: dropdownOption[] = [];
-    adAccountData.forEach((adAccount: { name: string; id: string }) => {
-      const option = {
-        "text": {
-          "type": "plain_text",
-          "text": adAccount.name,
-          "emoji": true,
-        },
-        "value": adAccount.id,
-      };
-      options.push(option);
-    });
-
-    // Open the Ad Account Form
-    const response = await client.views.open({
-      interactivity_pointer: inputs.interactivity.interactivity_pointer,
-      view: {
-        "type": "modal",
-        "callback_id": "fb-ad-account-form",
-        "submit": {
-          "type": "plain_text",
-          "text": "Submit",
-          "emoji": true,
-        },
-        "close": {
-          "type": "plain_text",
-          "text": "Cancel",
-          "emoji": true,
-        },
-        "title": {
-          "type": "plain_text",
-          "text": "FB Marketing",
-        },
-        "blocks": [
-          {
-            "type": "section",
-            "text": {
-              "type": "mrkdwn",
-              "text":
-                `Hi ${fb_name}, which ad account are we working on today?`,
-            },
-          },
-          {
-            "type": "divider",
-          },
-          {
-            "type": "input",
-            "block_id": "ad_account_id_dropdown",
-            "element": {
-              "type": "static_select",
-              "placeholder": {
-                "type": "plain_text",
-                "text": "Select an item",
-                "emoji": true,
-              },
-              "options": options,
-              "action_id": "ad_account_id_dropdown-action",
-            },
-            "label": {
-              "type": "plain_text",
-              "text": "Ad Account",
-              "emoji": true,
-            },
-          },
-        ],
-      },
-    });
-
-    // Handle the error if the modal was not opened successfully
-    if (response.error) {
-      const error =
-        `Failed to open a modal in the demo workflow. Contact the app maintainers with the following information - (error: ${response.error})`;
-      return { error };
-    }
-    return {
-      // To continue with this interaction, return false for the completion
-      completed: false,
-    };
-  },
-)
-  .addBlockActionsHandler(
-    "button-duplicate-fb-ad",
-    async ({ inputs, body, client }) => {
-      // const { originalAd, adAccountId, accessToken, _ad_account_name } = inputs; // Ensure 'originalAd' is passed properly
-
-      if (!originalAdId) {
-        return { error: "Original ad is missing or incomplete." };
+      if (fbTokenResponse.error) {
+        throw new Error(
+          `Failed to retrieve Facebook token: ${fbTokenResponse.error}`,
+        );
       }
 
+      const externalTokenFb = fbTokenResponse.external_token;
+
+      // Step 2: Fetch user info from Facebook
+      const userInfoResponse = await fetch("https://graph.facebook.com/me", {
+        headers: { Authorization: `Bearer ${externalTokenFb}` },
+      });
+
+      if (!userInfoResponse.ok) {
+        throw new Error(
+          `Failed to fetch user info: ${await userInfoResponse.text()}`,
+        );
+      }
+
+      const userInfo = await userInfoResponse.json();
+      const fb_name = userInfo.name;
+
+      // Step 3: Fetch ad accounts
+      const adAccountsResponse = await fetch(
+        `https://graph.facebook.com/v19.0/${userInfo.id}/adaccounts?fields=name`,
+        { headers: { Authorization: `Bearer ${externalTokenFb}` } },
+      );
+
+      if (!adAccountsResponse.ok) {
+        throw new Error(
+          `Failed to fetch ad accounts: ${await adAccountsResponse.text()}`,
+        );
+      }
+
+      const adAccounts = await adAccountsResponse.json();
+
+      // Prepare dropdown options for ad account selection
+      const options = adAccounts.data.map((
+        account: { name: string; id: string },
+      ) => ({
+        text: { type: "plain_text", text: account.name },
+        value: account.id,
+      }));
+
+      // Step 4: Open the ad account selection modal
+      const modalResponse = await client.views.open({
+        interactivity_pointer: inputs.interactivity.interactivity_pointer,
+        view: {
+          type: "modal",
+          callback_id: "ad_account_selection_modal",
+          title: { type: "plain_text", text: "Select Ad Account" },
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `Hi ${fb_name}, select an ad account:`,
+              },
+            },
+            {
+              type: "input",
+              block_id: "ad_account_select_block",
+              element: {
+                type: "static_select",
+                options,
+                action_id: "select_ad_account",
+              },
+              label: { type: "plain_text", text: "Ad Account" },
+            },
+          ],
+          submit: { type: "plain_text", text: "Submit" },
+          close: { type: "plain_text", text: "Cancel" },
+        },
+      });
+
+      if (modalResponse.error) {
+        throw new Error(`Failed to open modal: ${modalResponse.error}`);
+      }
+
+      return { completed: false }; // Continue interaction after modal
+    } catch (error) {
+      console.error("Error in DuplicateAdFunction:", error.message);
+      return { error: error.message };
+    }
+  },
+)
+  .addBlockActionsHandler("select_ad_account", async ({ body, client }) => {
+    const selectedAdAccountId = body.actions[0].selected_option.value;
+    console.log(`Ad Account Selected: ${selectedAdAccountId}`);
+
+    const triggerResponse = await client.triggers.invoke({
+      trigger_id: body.trigger_id, // Trigger ID from the user interaction
+      workflow: "#/triggers/ads-duplication-trigger",
+      inputs: {
+        user_id: body.user.id,
+        ad_id: selectedAdAccountId,
+      },
+    });
+
+    if (triggerResponse.error) {
+      console.error("Error invoking workflow trigger:", triggerResponse.error);
+      throw new Error("Failed to invoke workflow.");
+    }
+
+    return { completed: true };
+  })
+  .addBlockActionsHandler("duplicate_ad_button", async ({ inputs, client }) => {
+    // Step 6: Duplicate ad via AWS Lambda or API
+    try {
       const payload = {
         channel_id: inputs.channel_id,
-        ad_account_id: _ad_account_id,
-        fb_access_token: externalTokenFb,
-        ad_id: originalAdId, // The ID of the ad to be duplicated
+        ad_account_id: inputs.ad_id, // Passed from previous step
+        fb_access_token: inputs.fbAccessTokenId,
       };
 
-      const duplicate_ad_response = await fetch(
+      const response = await fetch(
         `${AWS_ROOT_URL}/${AWS_API_STAGE}/duplicate-ad`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         },
       );
 
-      if (duplicate_ad_response.status !== 200) {
-        const error =
-          `Failed to duplicate the ad (status: ${duplicate_ad_response.status})`;
-        console.log(error);
-        const response = await client.views.push({
-          interactivity_pointer: body.interactivity.interactivity_pointer,
-          view_id: body.view.id,
-          view: duplicate_ad_failed_view(_ad_account_name),
-        });
-        if (response.error) {
-          return { error: `Failed to update the modal: ${response.error}` };
-        }
+      if (response.status !== 200) {
+        throw new Error(`Failed to duplicate ad: ${response.statusText}`);
       }
 
-      const response = await client.views.push({
-        interactivity_pointer: body.interactivity.interactivity_pointer,
-        view_id: body.view.id,
-        view: duplicate_ad_success_view(_ad_account_name),
+      // Show success modal
+      const successModal = duplicateAdSuccessView("Ad Duplication Successful!");
+      await client.views.push({
+        view: successModal,
       });
-      if (response.error) {
-        return { error: `Failed to update the modal: ${response.error}` };
-      }
+    } catch (error) {
+      console.error("Error duplicating ad:", error);
 
-      return {
-        completed: false,
-      };
-    },
-  )
-  .addBlockActionsHandler("duplicate_ad_button", async ({ body, client }) => {
-    // Extract user_id and other necessary inputs
-    const userId = body.user.id;
-    const triggerId = body.trigger_id;
-
-    // Trigger the Duplicate Ad workflow
-    const workflowResponse = await client.workflows.start({
-      trigger_id: triggerId,
-      workflow: "#/workflows/duplicate-ad-workflow",
-      inputs: {
-        user_id: userId,
-        ad_id: "your_ad_id_here", // Fetch or input ad_id as needed
-      },
-    });
-
-    if (workflowResponse.error) {
-      console.error(
-        "Error triggering Duplicate Ad workflow:",
-        workflowResponse.error,
-      );
-    } else {
-      console.log("Duplicate Ad workflow successfully triggered.");
+      // Show failure modal
+      const failureModal = duplicateAdFailedView("Ad Duplication Failed!");
+      await client.views.push({
+        view: failureModal,
+      });
     }
-  })
-  .addBlockActionsHandler(
-    "client_account_input_action", // Action ID for the input
-    async ({ body, client }) => {
-      const clientAccountId = body.view.state.values.client_account_input_block
-        .client_account_input_action.value; // Extract user input
-
-      console.log(`Client Account ID Selected: ${clientAccountId}`);
-
-      // Proceed with workflow logic using the selected Client Account ID
-    },
-  );
+  });

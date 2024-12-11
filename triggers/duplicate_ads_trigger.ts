@@ -7,14 +7,14 @@ import clientAccountSelectWorkflow from "../workflows/client_account_selection_w
 
 // Handle button interaction (duplicate_ads)
 const duplicateAdsTrigger: Trigger<typeof duplicateAdWorkflow.definition> = {
-  type: TriggerTypes.Shortcut, // Action trigger type (e.g., shortcut)
-  name: "duplicate_ads", // Name of the action
-  workflow: `#/workflows/${duplicateAdWorkflow.definition.callback_id}`, // Reference the workflow using callback_id
+  type: TriggerTypes.Shortcut, // Trigger type
+  name: "Duplicate Ads Workflow", // Name of the action
+  workflow: `#/workflows/${duplicateAdWorkflow.definition.callback_id}`, // Reference the workflow
   inputs: {
-    user_id: { value: TriggerContextData.Shortcut.user_id }, // Extract user_id from context
-    channel_id: { value: TriggerContextData.Shortcut.channel_id }, // Extract channel_id from context
-    interactivity: { value: TriggerContextData.Shortcut.interactivity }, // Extract interactivity from context
-    ad_id: { value: TriggerContextData.Shortcut.interactivity }, // Ensure this matches what the workflow needs
+    user_id: { value: TriggerContextData.Shortcut.user_id },
+    channel_id: { value: TriggerContextData.Shortcut.channel_id },
+    interactivity: { value: TriggerContextData.Shortcut.interactivity },
+    ad_id: { value: TriggerContextData.Shortcut.interactivity }, // Pass interactivity pointer if needed
   },
 };
 
