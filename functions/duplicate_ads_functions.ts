@@ -294,36 +294,20 @@ export default SlackFunction(
     }
   },
 )
+  // Handle ad account selection
   .addBlockActionsHandler("select_ad_account", async ({ body, client }) => {
     const selectedAdAccountId = body.actions[0].selected_option.value;
-    console.log(`Ad Account Selected: ${selectedAdAccountId}`);
 
-    const triggerResponse = await client.triggers.invoke({
-      trigger_id: body.trigger_id, // Trigger ID from the user interaction
-      workflow: "#/triggers/ads-duplication-trigger",
-      inputs: {
-        user_id: body.user.id,
-        ad_id: selectedAdAccountId,
-      },
-    });
-
-    if (triggerResponse.error) {
-      console.error("Error invoking workflow trigger:", triggerResponse.error);
-      throw new Error("Failed to invoke workflow.");
-    }
-
-    return { completed: true };
-  })
-  .addBlockActionsHandler("duplicate_ad_button", async ({ inputs, client }) => {
-    // Step 6: Duplicate ad via AWS Lambda or API
     try {
+      console.log(`Ad Account Selected: ${selectedAdAccountId}`);
+
+      // Step 5: Perform ad duplication directly
       const payload = {
-        channel_id: inputs.channel_id,
-        ad_account_id: inputs.ad_id, // Passed from previous step
-        fb_access_token: inputs.fbAccessTokenId,
+        ad_account_id: selectedAdAccountId,
+        fb_access_token: externalTokenFb,
       };
 
-      const response = await fetch(
+      const duplicateAdResponse = await fetch(
         `${AWS_ROOT_URL}/${AWS_API_STAGE}/duplicate-ad`,
         {
           method: "POST",
@@ -332,8 +316,10 @@ export default SlackFunction(
         },
       );
 
-      if (response.status !== 200) {
-        throw new Error(`Failed to duplicate ad: ${response.statusText}`);
+      if (!duplicateAdResponse.ok) {
+        throw new Error(
+          `Failed to duplicate ad: ${await duplicateAdResponse.text()}`,
+        );
       }
 
       // Show success modal
@@ -341,6 +327,8 @@ export default SlackFunction(
       await client.views.push({
         view: successModal,
       });
+
+      return { completed: true };
     } catch (error) {
       console.error("Error duplicating ad:", error);
 
@@ -349,5 +337,7 @@ export default SlackFunction(
       await client.views.push({
         view: failureModal,
       });
+
+      return { completed: true };
     }
   });
