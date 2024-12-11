@@ -34,7 +34,7 @@ let fb_name = "";
 let fb_id = "";
 let originalAdId: string;
 let externalTokenFb: string | undefined = "";
-// let externalTokenGs: string | undefined = "";
+let externalTokenGs: string | undefined = "";
 let _ad_account_id: string;
 let _ad_account_name: string;
 let _spreadsheet_id: string;
@@ -81,73 +81,6 @@ function duplicate_ad_success_view(adAccountName: string) {
     ],
   };
 }
-
-// Example Slack Modal with a button to trigger the Duplicate Ad workflow
-const modalView = {
-  type: "modal",
-  callback_id: "duplicate_ad_modal",
-  title: {
-    type: "plain_text",
-    text: "Duplicate Facebook Ad",
-  },
-  blocks: [
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: "*Click below to duplicate an ad*",
-      },
-    },
-    {
-      type: "actions",
-      elements: [
-        {
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: "Duplicate Ad",
-          },
-          action_id: "duplicate_ad_button", // Unique ID for the button
-        },
-      ],
-    },
-  ],
-};
-
-const modalView = {
-  type: "modal",
-  callback_id: "client_account_select_modal",
-  title: {
-    type: "plain_text",
-    text: "Select Client Account",
-  },
-  blocks: [
-    {
-      type: "input",
-      block_id: "client_account_input_block",
-      label: {
-        type: "plain_text",
-        text: "Enter Client Account ID",
-      },
-      element: {
-        type: "plain_text_input",
-        action_id: "client_account_input_action",
-        placeholder: {
-          type: "plain_text",
-          text: "Client Account ID",
-        },
-      },
-    },
-  ],
-  submit: {
-    type: "plain_text",
-    text: "Submit",
-  },
-  close: {
-    type: "plain_text",
-    text: "Cancel",
-  },
-};
 
 // Open the modal in your function
 await client.views.open({
@@ -284,25 +217,25 @@ export const DuplicateAdFunction = DefineFunction({
 });
 
 // functions/open_client_account_modal.ts
-import { SlackFunction } from "deno-slack-sdk/mod.ts";
+// import { SlackFunction } from "deno-slack-sdk/mod.ts";
 import { clientAccountSelectModal } from "../modals/client_account_select_modal.ts";
 
-export default SlackFunction(
-  "open-client-account-modal",
-  async ({ inputs, client }) => {
-    const response = await client.views.open({
-      trigger_id: inputs.interactivity.interactivity_pointer, // Use interactivity pointer
-      view: clientAccountSelectModal, // Use the modal definition
-    });
+// export default SlackFunction(
+//   "open-client-account-modal",
+//   async ({ inputs, client }) => {
+//     const response = await client.views.open({
+//       trigger_id: inputs.interactivity.interactivity_pointer, // Use interactivity pointer
+//       view: clientAccountSelectModal, // Use the modal definition
+//     });
 
-    if (response.error) {
-      console.error(`Failed to open modal: ${response.error}`);
-      return { error: "Failed to open client account modal." };
-    }
+//     if (response.error) {
+//       console.error(`Failed to open modal: ${response.error}`);
+//       return { error: "Failed to open client account modal." };
+//     }
 
-    return { outputs: {} }; // Return outputs if needed
-  },
-);
+//     return { outputs: {} }; // Return outputs if needed
+//   },
+// );
 
 // Function Implementation
 export default SlackFunction(
@@ -516,28 +449,30 @@ export default SlackFunction(
       };
     },
   )
-  .addBlockActionsHandler(
-    "duplicate_ad_button", // This matches the button's action_id
-    async ({ inputs, body, client }) => {
-      const { ad_id, user_id, channel_id } = inputs;
+  .addBlockActionsHandler("duplicate_ad_button", async ({ body, client }) => {
+    // Extract user_id and other necessary inputs
+    const userId = body.user.id;
+    const triggerId = body.trigger_id;
 
-      // You can pass these inputs to trigger the workflow
-      const result = await client.workflows.trigger({
-        workflow_id: "duplicate-ad-workflow", // ID of the workflow defined in your workflow file
-        inputs: {
-          user_id: user_id,
-          channel_id: channel_id,
-          interactivity: body.interactivity,
-          ad_id: ad_id, // This is the Facebook Ad ID to duplicate
-        },
-      });
+    // Trigger the Duplicate Ad workflow
+    const workflowResponse = await client.workflows.start({
+      trigger_id: triggerId,
+      workflow: "#/workflows/duplicate-ad-workflow",
+      inputs: {
+        user_id: userId,
+        ad_id: "your_ad_id_here", // Fetch or input ad_id as needed
+      },
+    });
 
-      // Handle workflow response or errors
-      if (result.error) {
-        console.error("Error triggering workflow:", result.error);
-      }
-    },
-  )
+    if (workflowResponse.error) {
+      console.error(
+        "Error triggering Duplicate Ad workflow:",
+        workflowResponse.error,
+      );
+    } else {
+      console.log("Duplicate Ad workflow successfully triggered.");
+    }
+  })
   .addBlockActionsHandler(
     "client_account_input_action", // Action ID for the input
     async ({ body, client }) => {

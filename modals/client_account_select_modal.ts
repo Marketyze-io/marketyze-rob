@@ -33,3 +33,44 @@ export const clientAccountSelectModal = {
     text: "Cancel",
   },
 };
+
+// Example Slack Modal with a button to trigger the Duplicate Ad workflow
+export const duplicateAdModal = {
+  type: "modal",
+  callback_id: "duplicate_ad_modal",
+  title: {
+    type: "plain_text",
+    text: "Duplicate Facebook Ad",
+  },
+  blocks: [
+    {
+      type: "input",
+      block_id: "ad_input_block",
+      label: {
+        type: "plain_text",
+        text: "Enter Ad ID",
+      },
+      element: {
+        type: "plain_text_input",
+        action_id: "ad_input_action",
+        placeholder: {
+          type: "plain_text",
+          text: "Ad ID",
+        },
+      },
+    },
+    {
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "Duplicate Ad",
+          },
+          action_id: "duplicate_ad_button",
+        },
+      ],
+    },
+  ],
+};
