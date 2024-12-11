@@ -1,11 +1,4 @@
 import { DefineFunction, Schema, SlackFunction } from "deno-slack-sdk/mod.ts";
-// For the interface for ads duplication
-// import {
-//   ActionsBlock,
-//   Block,
-//   ButtonElement,
-//   SectionBlock,
-// } from "deno-slack-sdk/mod.ts";
 
 // Interface representing the options for the static select
 interface dropdownOption {
@@ -43,43 +36,37 @@ let _spreadsheet_id: string;
 // const sessionStore: Record<string, any> = {};
 const sessionStore: { [key: string]: { accessToken: string } } = {}; // Temporary in-memory store
 
-function duplicate_ad_failed_view(adAccountName: string) {
+function createModal(title: string, message: string): object {
   return {
     type: "modal",
     title: {
       type: "plain_text",
-      text: "Ad Duplication Failed",
+      text: title,
     },
     blocks: [
       {
         type: "section",
         text: {
           type: "mrkdwn",
-          text:
-            `Failed to duplicate the ad for account: ${adAccountName}. Please try again later.`,
+          text: message,
         },
       },
     ],
   };
 }
 
-function duplicate_ad_success_view(adAccountName: string) {
-  return {
-    type: "modal",
-    title: {
-      type: "plain_text",
-      text: "Ad Duplication Successful",
-    },
-    blocks: [
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `Successfully duplicated the ad for account: ${adAccountName}.`,
-        },
-      },
-    ],
-  };
+export function duplicateAdFailedView(adAccountName: string): object {
+  return createModal(
+    "Ad Duplication Failed",
+    `Failed to duplicate the ad for account: ${adAccountName}. Please try again later.`,
+  );
+}
+
+export function duplicateAdSuccessView(adAccountName: string): object {
+  return createModal(
+    "Ad Duplication Successful",
+    `Successfully duplicated the ad for account: ${adAccountName}.`,
+  );
 }
 
 // Open the modal in your function
