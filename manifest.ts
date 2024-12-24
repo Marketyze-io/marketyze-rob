@@ -5,6 +5,7 @@ import fbManagerWorkflow from "./workflows/fb_manager_workflow.ts";
 import fbManagerDevWorkflow from "./workflows/fb_manager_dev_workflow.ts";
 import fbMeWorkflow from "./workflows/fb_me_workflow.ts";
 import sayHiWorkflow from "./workflows/say_hi_workflow.ts";
+import duplicateAdWorkflow from "./workflows/duplicate_ad_workflow.ts";
 import { FbMeFunction } from "./functions/fb_me.ts";
 
 const FbOAuthProvider = DefineOAuth2Provider({
@@ -68,6 +69,7 @@ export default Manifest({
     fbManagerDevWorkflow,
     fbMeWorkflow,
     sayHiWorkflow,
+    duplicateAdWorkflow,
   ],
   outgoingDomains: [
     "graph.facebook.com",

@@ -156,32 +156,13 @@ export async function sendSlackModal(userId: string, modalView: object) {
   }
 }
 
-// Function to handle opening the modal
-export const OpenClientAccountModalFunction = DefineFunction({
-  callback_id: "open-client-account-modal",
-  title: "Open Client Account Modal",
-  source_file: "functions/open_client_account_modal.ts",
-  input_parameters: {
-    properties: {
-      user_id: { type: Schema.slack.types.user_id },
-      channel_id: { type: Schema.slack.types.channel_id },
-      interactivity: { type: Schema.slack.types.interactivity },
-    },
-    required: ["user_id", "channel_id", "interactivity"],
-  },
-  output_parameters: {
-    properties: {
-      ad_id: { type: Schema.types.string }, // The selected ad ID
-    },
-    required: ["ad_id"],
-  },
-});
+///////////////////////////////////////////////////////////////////////
 
-// Define the Slack function
+// Slack Function Definition
 export const DuplicateAdFunction = DefineFunction({
   callback_id: "duplicate-ad-function",
   title: "Duplicate Facebook Ad",
-  source_file: "functions/duplicate_ad_function.ts",
+  source_file: "functions/duplicate_ad_functions.ts",
   input_parameters: {
     properties: {
       user_id: { type: Schema.slack.types.user_id },
@@ -191,24 +172,24 @@ export const DuplicateAdFunction = DefineFunction({
         type: Schema.slack.types.oauth2,
         oauth2_provider_key: "marketyze-login-fb",
       },
-      ad_id: { type: Schema.types.string },
     },
-    required: ["user_id", "channel_id", "interactivity", "ad_id"],
+    required: ["user_id", "channel_id", "interactivity", "fbAccessTokenId"],
   },
 });
 
-// Function Implementation
-// Implement the Slack function
+// Slack Function Implementation
 export default SlackFunction(
   DuplicateAdFunction,
   async ({ inputs, client }) => {
     try {
+      const { user_id, channel_id, interactivity, fbAccessTokenId } = inputs;
+
       // Step 1: Retrieve Facebook access token
       const fbTokenResponse = await client.apps.auth.external.get({
-        external_token_id: inputs.fbAccessTokenId,
+        external_token_id: fbAccessTokenId,
       });
 
-      if (fbTokenResponse.error) {
+      if (!fbTokenResponse.ok) {
         throw new Error(
           `Failed to retrieve Facebook token: ${fbTokenResponse.error}`,
         );
@@ -216,35 +197,27 @@ export default SlackFunction(
 
       const externalTokenFb = fbTokenResponse.external_token;
 
-      // Step 2: Fetch user info from Facebook
-      const userInfoResponse = await fetch("https://graph.facebook.com/me", {
-        headers: { Authorization: `Bearer ${externalTokenFb}` },
+      // Step 2: Call AWS Lambda to fetch ad accounts
+      const fetchAdAccountsEndpoint =
+        `${AWS_ROOT_URL}/${AWS_API_STAGE}/fetch-ad-accounts`;
+      const fetchAdAccountsPayload = {
+        fb_access_token: externalTokenFb,
+      };
+
+      const adAccountsResponse = await fetch(fetchAdAccountsEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fetchAdAccountsPayload),
       });
 
-      if (!userInfoResponse.ok) {
-        throw new Error(
-          `Failed to fetch user info: ${await userInfoResponse.text()}`,
-        );
-      }
-
-      const userInfo = await userInfoResponse.json();
-      const fb_name = userInfo.name;
-
-      // Step 3: Fetch ad accounts
-      const adAccountsResponse = await fetch(
-        `https://graph.facebook.com/v19.0/${userInfo.id}/adaccounts?fields=name`,
-        { headers: { Authorization: `Bearer ${externalTokenFb}` } },
-      );
-
       if (!adAccountsResponse.ok) {
-        throw new Error(
-          `Failed to fetch ad accounts: ${await adAccountsResponse.text()}`,
-        );
+        const responseText = await adAccountsResponse.text();
+        throw new Error(`Failed to fetch ad accounts: ${responseText}`);
       }
 
       const adAccounts = await adAccountsResponse.json();
 
-      // Prepare dropdown options for ad account selection
+      // Step 3: Prepare dropdown options for modal
       const options = adAccounts.data.map((
         account: { name: string; id: string },
       ) => ({
@@ -252,9 +225,9 @@ export default SlackFunction(
         value: account.id,
       }));
 
-      // Step 4: Open the ad account selection modal
+      // Step 4: Open modal for ad account selection
       const modalResponse = await client.views.open({
-        interactivity_pointer: inputs.interactivity.interactivity_pointer,
+        interactivity_pointer: interactivity.interactivity_pointer,
         view: {
           type: "modal",
           callback_id: "ad_account_selection_modal",
@@ -264,7 +237,7 @@ export default SlackFunction(
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `Hi ${fb_name}, select an ad account:`,
+                text: `Hi! Select an ad account to duplicate an ad.`,
               },
             },
             {
@@ -283,61 +256,83 @@ export default SlackFunction(
         },
       });
 
-      if (modalResponse.error) {
+      if (!modalResponse.ok) {
         throw new Error(`Failed to open modal: ${modalResponse.error}`);
       }
 
-      return { completed: false }; // Continue interaction after modal
+      return { completed: false }; // Wait for modal interaction
     } catch (error) {
       console.error("Error in DuplicateAdFunction:", error.message);
       return { error: error.message };
     }
   },
-)
-  // Handle ad account selection
-  .addBlockActionsHandler("select_ad_account", async ({ body, client }) => {
-    const selectedAdAccountId = body.actions[0].selected_option.value;
+).addBlockActionsHandler("select_ad_account", async ({ body, client }) => {
+  const selectedAdAccountId = body.actions[0].selected_option.value;
 
-    try {
-      console.log(`Ad Account Selected: ${selectedAdAccountId}`);
+  try {
+    console.log(`Ad Account Selected: ${selectedAdAccountId}`);
 
-      // Step 5: Perform ad duplication directly
-      const payload = {
-        ad_account_id: selectedAdAccountId,
-        fb_access_token: externalTokenFb,
-      };
+    // Step 5: Perform ad duplication via Lambda
+    const duplicateAdEndpoint = `${AWS_ROOT_URL}/${AWS_API_STAGE}/duplicate-ad`;
+    const duplicateAdPayload = {
+      ad_account_id: selectedAdAccountId,
+      fb_access_token: externalTokenFb,
+    };
 
-      const duplicateAdResponse = await fetch(
-        `${AWS_ROOT_URL}/${AWS_API_STAGE}/duplicate-ad`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      );
+    const duplicateAdResponse = await fetch(duplicateAdEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(duplicateAdPayload),
+    });
 
-      if (!duplicateAdResponse.ok) {
-        throw new Error(
-          `Failed to duplicate ad: ${await duplicateAdResponse.text()}`,
-        );
-      }
-
-      // Show success modal
-      const successModal = duplicateAdSuccessView("Ad Duplication Successful!");
-      await client.views.push({
-        view: successModal,
-      });
-
-      return { completed: true };
-    } catch (error) {
-      console.error("Error duplicating ad:", error);
-
-      // Show failure modal
-      const failureModal = duplicateAdFailedView("Ad Duplication Failed!");
-      await client.views.push({
-        view: failureModal,
-      });
-
-      return { completed: true };
+    if (!duplicateAdResponse.ok) {
+      const responseText = await duplicateAdResponse.text();
+      throw new Error(`Failed to duplicate ad: ${responseText}`);
     }
-  });
+
+    // Step 6: Push success modal
+    const successModal = {
+      type: "modal",
+      title: { type: "plain_text", text: "Success" },
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text:
+              `Successfully duplicated the ad for account: ${selectedAdAccountId}.`,
+          },
+        },
+      ],
+    };
+
+    await client.views.push({
+      view: successModal,
+    });
+
+    return { completed: true };
+  } catch (error) {
+    console.error("Error duplicating ad:", error.message);
+
+    // Step 7: Push failure modal
+    const failureModal = {
+      type: "modal",
+      title: { type: "plain_text", text: "Error" },
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `Failed to duplicate the ad. Please try again later.`,
+          },
+        },
+      ],
+    };
+
+    await client.views.push({
+      view: failureModal,
+    });
+
+    return { completed: true };
+  }
+});
