@@ -218,6 +218,15 @@ export default SlackFunction(
       const adAccounts = await adAccountsResponse.json();
 
       // Step 3: Prepare dropdown options for modal
+      // Debugging: Log the raw API response
+      console.log("Ad Accounts API Response:", adAccounts);
+
+      // Validation: Check if the data structure is valid
+      if (!adAccounts || !adAccounts.data || !Array.isArray(adAccounts.data)) {
+        throw new Error("Invalid or missing ad account data");
+      }
+
+      // Mapping: Process the ad accounts into dropdown options
       const options = adAccounts.data.map((
         account: { name: string; id: string },
       ) => ({
