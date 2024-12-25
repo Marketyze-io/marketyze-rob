@@ -199,7 +199,7 @@ export default SlackFunction(
 
       // Step 2: Call AWS Lambda to fetch ad accounts
       const fetchAdAccountsEndpoint =
-        `${AWS_ROOT_URL}/${AWS_API_STAGE}/fetch-ad-accounts`;
+        `${AWS_ROOT_URL}/${AWS_API_STAGE}/ad-accounts/fetch`;
       const fetchAdAccountsPayload = {
         fb_access_token: externalTokenFb,
       };
@@ -273,7 +273,8 @@ export default SlackFunction(
     console.log(`Ad Account Selected: ${selectedAdAccountId}`);
 
     // Step 5: Perform ad duplication via Lambda
-    const duplicateAdEndpoint = `${AWS_ROOT_URL}/${AWS_API_STAGE}/duplicate-ad`;
+    const duplicateAdEndpoint =
+      `${AWS_ROOT_URL}/${AWS_API_STAGE}/ads/duplicate`;
     const duplicateAdPayload = {
       ad_account_id: selectedAdAccountId,
       fb_access_token: externalTokenFb,
